@@ -1,7 +1,7 @@
 #-----------------------------------------------------------------------------------------------------------------------
 # Target: test_package
 # Type: Executable
-# Dependencies: cpp_circular_array::cpp_circular_array
+# Dependencies: collections::circular_array
 #-----------------------------------------------------------------------------------------------------------------------
 # Target definition
 add_executable(test_package)
@@ -15,5 +15,5 @@ target_sources(test_package
 # Target dependencies
 target_link_libraries(test_package
     PRIVATE
-        cpp_circular_array::cpp_circular_array
+        collections::circular_array
 )
