@@ -5,7 +5,7 @@
 #include <iostream>
 
 // Local Includes
-#include <cpp_circular_array/cpp_circular_array.hpp>
+#include <collections/circular_array.hpp>
 
 auto main() -> int {
     std::println(std::cout, "Hello world!");
