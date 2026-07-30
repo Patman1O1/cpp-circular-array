@@ -2,7 +2,7 @@
 # Information
 #-----------------------------------------------------------------------------------------------------------------------
 cmake_minimum_required(VERSION 4.3.0)
-project("cpp_circular_array"
+project("circular_array"
         VERSION 0.1.0
         DESCRIPTION ""
         LANGUAGES CXX
@@ -61,44 +61,44 @@ if(NOT CMAKE_SKIP_INSTALL_RULES)
 endif()
 
 #-----------------------------------------------------------------------------------------------------------------------
-# Target: cpp_circular_array_headers
-# Alias: cpp_circular_array::cpp_circular_array_headers
+# Target: circular_array_headers
+# Alias: collections::circular_array_headers
 # Type: Interface Library
 #-----------------------------------------------------------------------------------------------------------------------
 # Target definition
-add_library(cpp_circular_array_headers INTERFACE)
+add_library(circular_array_headers INTERFACE)
 
 # Target alias
-add_library(cpp_circular_array::cpp_circular_array_headers ALIAS cpp_circular_array_headers)
+add_library(collections::circular_array_headers ALIAS circular_array_headers)
 
 # Target headers
-target_include_directories(cpp_circular_array_headers
+target_include_directories(circular_array_headers
     INTERFACE
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
         $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
 )
 
 #-----------------------------------------------------------------------------------------------------------------------
-# Target: cpp_circular_array
-# Alias: cpp_circular_array::cpp_circular_array
+# Target: circular_array
+# Alias: collections::circular_array
 # Type: Interface Library
-# Dependencies: cpp_circular_array::cpp_circular_array_headers
+# Dependencies: collections::circular_array_headers
 #-----------------------------------------------------------------------------------------------------------------------
 # Target definition
-add_library(cpp_circular_array INTERFACE)
+add_library(circular_array INTERFACE)
 
 # Target alias
-add_library(cpp_circular_array::cpp_circular_array ALIAS cpp_circular_array)
+add_library(collections::circular_array ALIAS circular_array)
 
 # Target dependencies
-target_link_libraries(cpp_circular_array
+target_link_libraries(circular_array
     INTERFACE
-        cpp_circular_array::cpp_circular_array_headers
+        collections::circular_array_headers
 )
 
 # Target properties
-set_target_properties(cpp_circular_array PROPERTIES
-        OUTPUT_NAME cpp_circular_array
+set_target_properties(circular_array PROPERTIES
+        OUTPUT_NAME circular_array
         VERSION ${PROJECT_VERSION}
         SOVERSION ${PROJECT_VERSION_MAJOR}
         CXX_VISIBILITY_PRESET hidden
@@ -106,12 +106,12 @@ set_target_properties(cpp_circular_array PROPERTIES
 )
 
 if(NOT CMAKE_SKIP_INSTALL_RULES)
-    # Install cpp_circular_array
-    install(TARGETS cpp_circular_array
-            RUNTIME COMPONENT cpp_circular_array
-            LIBRARY COMPONENT cpp_circular_array
-            NAMELINK_COMPONENT cpp_circular_array
-            ARCHIVE COMPONENT cpp_circular_array
+    # Install circular_array
+    install(TARGETS circular_array
+            RUNTIME COMPONENT circular_array
+            LIBRARY COMPONENT circular_array
+            NAMELINK_COMPONENT circular_array
+            ARCHIVE COMPONENT circular_array
             INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 endif()
 
