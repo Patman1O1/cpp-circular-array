@@ -2,8 +2,8 @@ from conan import ConanFile
 from conan.tools.cmake import CMake, CMakeToolchain, CMakeDeps, cmake_layout
 import os
 
-class CppCircularArray(ConanFile):
-    name = "cpp_circular_array"
+class CircularArray(ConanFile):
+    name = "circular_array"
     version = "0.1.0"
     author = "Patman1O1"
     description = ""
@@ -22,7 +22,7 @@ class CppCircularArray(ConanFile):
     def build_requirements(self) -> None:
         self.tool_requires("cmake/[>=4.3.0]")
         if bool(self.options.build_tests) or self.settings.build_type == "Debug":
-            self.test_requires("gtest/1.14.0")
+            self.test_requires("gtest/1.17.0")
 
     def layout(self) -> None: cmake_layout(self)
 
@@ -43,6 +43,6 @@ class CppCircularArray(ConanFile):
     def package(self) -> None: CMake(self).install()
 
     def package_info(self) -> None:
-        self.cpp_info.set_property("cmake_target_name", "cpp_circular_array::cpp_circular_array")
+        self.cpp_info.set_property("cmake_target_name", "collections::circular_array")
         self.cpp_info.bindirs = []
         self.cpp_info.libdirs = []
