@@ -1,0 +1,9 @@
+Metadata-Version: 2.4
+Name: c-cxx-project-template
+Version: 0.1.0
+Summary: A template repository for C/C++ projects with CMake and Conan. A GitHub Action workflow is provided with the on workflow_dispatch event. This event has a Project Type input that lets the user configure this template as a C executable, static library, shared library, or an interface library which is header only.
+Requires-Python: >=3.12
+License-File: LICENSE
+Requires-Dist: jinja2
+Requires-Dist: click
+Dynamic: license-file

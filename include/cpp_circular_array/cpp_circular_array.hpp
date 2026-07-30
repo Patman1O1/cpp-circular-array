@@ -1,0 +1,4 @@
+#ifndef CPP_CIRCULAR_ARRAY_HPP
+#define CPP_CIRCULAR_ARRAY_HPP
+
+#endif // #ifndef CPP_CIRCULAR_ARRAY_HPP
