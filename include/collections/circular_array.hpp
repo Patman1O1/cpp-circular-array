@@ -161,7 +161,7 @@ namespace collections {
             }
 
             constexpr auto operator-=(const difference_type n) noexcept -> iterator& {
-                this->ptr_ -= n;
+                this->ptr_ = _move_ptr(this->ptr_, -n);
                 return *this;
             }
 
@@ -244,7 +244,7 @@ namespace collections {
             }
 
             constexpr auto operator++() noexcept -> const_iterator& {
-                ++this->ptr_;
+                this->ptr_ = const_cast<const_pointer>(_move_ptr(this->ptr_, 1));
                 return *this;
             }
 
@@ -255,18 +255,20 @@ namespace collections {
             }
 
             constexpr auto operator+=(const difference_type n) noexcept -> const_iterator& {
-                this->ptr_ += n;
+                this->ptr_ = const_cast<const_pointer>(_move_ptr(this->ptr_, n));
                 return *this;
             }
 
             [[nodiscard]] constexpr auto operator+(const difference_type n)
-                const noexcept -> const_iterator { return const_iterator{this->ptr_ + n}; }
+                const noexcept -> const_iterator {
+                return const_iterator{const_cast<const_pointer>(_move_ptr(this->ptr_, n))};
+            }
 
             friend constexpr auto operator+(const difference_type n, const const_iterator& it)
                 noexcept -> const_iterator { return it + n; }
 
             constexpr auto operator--() noexcept -> const_iterator& {
-                --this->ptr_;
+                this->ptr_ = const_cast<const_pointer>(_move_ptr(this->ptr_, -1));
                 return *this;
             }
 
@@ -277,7 +279,7 @@ namespace collections {
             }
 
             constexpr auto operator-=(const difference_type n) noexcept -> const_iterator& {
-                this->ptr_ -= n;
+                this->ptr_ = const_cast<const_pointer>(_move_ptr(this->ptr_, -n));
                 return *this;
             }
 
@@ -295,8 +297,9 @@ namespace collections {
                 noexcept -> difference_type { return lhs.ptr_ - rhs.ptr_; }
 
             [[nodiscard]] constexpr auto operator[](const difference_type n)
-                const noexcept -> const_reference { return *(this->ptr_ + n); }
-
+                const noexcept -> const_reference {
+                return const_cast<const_reference>(*_move_ptr(this->ptr_, n));
+            }
         };
 
         // ── Overloaded Operators ────────────────────────────────────────────────────────────────
