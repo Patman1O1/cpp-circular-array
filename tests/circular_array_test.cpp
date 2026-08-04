@@ -29,6 +29,11 @@ namespace collections::circular_array_testing {
         template<typename... Args>
         concept deducible = requires { circular_array{std::declval<Args>()...}; };
 
+        template<typename T, std::size_t N>
+        constexpr auto move_ptr(T* ptr, const std::ptrdiff_t index) noexcept -> T* {
+            return ptr + (((index % N) + N) % N);
+        }
+
     } // namespace
 
     // ── Aggregate Tests ─────────────────────────────────────────────────────────────────────────
@@ -271,37 +276,10 @@ namespace collections::circular_array_testing {
             SUCCEED();
         }
 
-        TEST(circular_array_methods, at_mut_overload_is_not_noexcept) {
-            static_assert(!noexcept(std::declval<circular_array<int, 3>&>().at(0)));
+        TEST(circular_array_methods, at_mut_overload_is_noexcept) {
+            static_assert(noexcept(std::declval<circular_array<int, 3>&>().at(0)));
 
             SUCCEED();
-        }
-
-        TEST(circular_array_methods, at_mut_overload_does_not_throw) {
-            static_assert([] -> bool {
-                circular_array values = {1, 2, 3};
-                values.at(0) = 10;
-                return 10 == values.at(0) && 2 == values.at(1) && 3 == values.at(2);
-            }());
-
-            circular_array values = {1, 2, 3};
-            EXPECT_NO_THROW(static_cast<void>(values.at(0)));
-            EXPECT_NO_THROW(static_cast<void>(values.at(2)));
-
-            values.at(2) = 30;
-            EXPECT_EQ(30, values[2]);
-            EXPECT_EQ(&values[2], &values.at(2));
-        }
-
-        TEST(circular_array_methods, at_mut_overload_throws) {
-            circular_array values = {1, 2, 3};
-
-            EXPECT_THROW(static_cast<void>(values.at(3)), std::out_of_range);
-            EXPECT_THROW(
-                static_cast<void>(
-                    values.at(std::numeric_limits<circular_array<int, 3>::size_type>::max())
-                ), std::out_of_range
-            );
         }
 
         TEST(circular_array_methods, at_const_overload_returns_const_ref) {
@@ -321,31 +299,10 @@ namespace collections::circular_array_testing {
             SUCCEED();
         }
 
-        TEST(circular_array_methods, at_const_overload_is_not_noexcept) {
-            static_assert(!noexcept(std::declval<const circular_array<int, 3>&>().at(0)));
+        TEST(circular_array_methods, at_const_overload_is_noexcept) {
+            static_assert(noexcept(std::declval<const circular_array<int, 3>&>().at(0)));
 
             SUCCEED();
-        }
-
-        TEST(circular_array_methods, at_const_overload_does_not_throw) {
-            constexpr circular_array values = {1, 2, 3};
-            static_assert(1 == values.at(0));
-            static_assert(2 == values.at(1));
-            static_assert(3 == values.at(2));
-
-            EXPECT_NO_THROW(static_cast<void>(values.at(0)));
-            EXPECT_NO_THROW(static_cast<void>(values.at(2)));
-            EXPECT_EQ(&values[2], &values.at(2));
-        }
-
-        TEST(circular_array_methods, at_const_overload_throws) {
-            constexpr circular_array values = {1, 2, 3};
-
-            EXPECT_THROW(static_cast<void>(values.at(3)), std::out_of_range);
-            EXPECT_THROW(static_cast<void>(
-                values.at(std::numeric_limits<circular_array<int, 3>::size_type>::max())),
-                std::out_of_range
-            );
         }
 
         TEST(circular_array_methods, front_mut_overload_single_element_array) {
