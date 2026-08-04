@@ -305,12 +305,12 @@ namespace collections {
 
         [[nodiscard]] constexpr auto operator<=>(const circular_array&) const = default;
 
-        [[nodiscard]] constexpr auto operator[](const size_type index) noexcept -> reference {
-            return this->values_[index];
+        [[nodiscard]] constexpr auto operator[](const difference_type index) noexcept -> reference {
+            return *_move_ptr(this->values_, index);
         }
 
         [[nodiscard]] constexpr auto operator[](const size_type index)
-            const noexcept -> const_reference { return this->values_[index]; }
+            const noexcept -> const_reference { return *_move_ptr(this->values_, index); }
 
         // ── Methods ──────────────────────────────────────────────────────────────────────────────────
         [[nodiscard]] constexpr auto at(const size_type index) -> reference {
