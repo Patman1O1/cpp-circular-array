@@ -646,7 +646,7 @@ namespace collections::circular_array_testing {
 
     // ── Iterator Tests ──────────────────────────────────────────────────────────────────────────
     namespace iterator_tests {
-        TEST(circular_array_iterators, satisfies_contiguous_range_mutably_and_constly) {
+        TEST(circular_array_iterators, satisfies_contiguous_range) {
             static_assert(std::ranges::contiguous_range<circular_array<int, 3>>);
 
             static_assert(std::ranges::contiguous_range<const circular_array<int, 3>>);
