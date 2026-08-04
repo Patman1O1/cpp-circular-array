@@ -309,7 +309,7 @@ namespace collections {
             return *_move_ptr(this->values_, index);
         }
 
-        [[nodiscard]] constexpr auto operator[](const size_type index)
+        [[nodiscard]] constexpr auto operator[](const difference_type index)
             const noexcept -> const_reference { return *_move_ptr(this->values_, index); }
 
         // ── Methods ──────────────────────────────────────────────────────────────────────────────────
