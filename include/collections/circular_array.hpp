@@ -460,5 +460,4 @@ namespace collections {
 
 } // namespace collections
 
-
 #endif // COLLECTIONS_ARRAY_HPP
