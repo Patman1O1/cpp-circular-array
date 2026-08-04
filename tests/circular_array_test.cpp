@@ -254,6 +254,118 @@ namespace collections::circular_array_testing {
         }
     } // namespace overloaded_operators_tests
 
+    // ── Iterator Tests ──────────────────────────────────────────────────────────────────────────
+    namespace iterator_tests {
+        TEST(circular_array_iterators, satisfies_contiguous_range) {
+            static_assert(std::ranges::contiguous_range<circular_array<int, 3>>);
+
+            static_assert(std::ranges::contiguous_range<const circular_array<int, 3>>);
+            static_assert(std::ranges::sized_range<circular_array<int, 3>>);
+
+            static_assert(std::same_as<std::ranges::range_value_t<circular_array<int, 3>>, int>);
+
+            static_assert(
+                std::same_as<
+                    decltype(
+                        std::declval<circular_array<int, 3>&>().begin()
+                    ), circular_array<int, 3>::iterator
+                >
+            );
+
+            static_assert(
+                std::same_as<decltype(std::declval<const circular_array<int, 3>&>().begin()),
+                circular_array<int, 3>::const_iterator>
+            );
+
+            SUCCEED();
+        }
+
+        TEST(circular_array_iterators, begin_and_end_span_the_array) {
+            static_assert([] -> bool {
+                circular_array values = {1, 2, 3};
+                *values.begin() = 10;
+                return 10 == values[0] && values.end() - values.begin() == 3;
+            }());
+
+            circular_array values = {1, 2, 3};
+
+            EXPECT_EQ(values.data(), values.begin());
+            EXPECT_EQ(values.data() + 3, values.end());
+            EXPECT_EQ(3, values.end() - values.begin());
+            EXPECT_EQ(1, *values.begin());
+            EXPECT_EQ(3, *(values.end() - 1));
+        }
+
+        TEST(circular_array_iterators, a_const_array_is_iterable_with_a_range_for) {
+            constexpr circular_array values = {1, 2, 3};
+
+            int sum = 0;
+            for (const int value : values) {
+                sum += value;
+            }
+
+            EXPECT_EQ(6, sum);
+            EXPECT_EQ(values.data(), values.begin());
+            EXPECT_EQ(3, values.end() - values.begin());
+        }
+
+        TEST(circular_array_iterators, cbegin_and_cend_are_const_on_a_mutable_array) {
+            circular_array values = {1, 2, 3};
+
+            static_assert(
+                std::same_as<decltype(values.cbegin()), circular_array<int, 3>::const_iterator>
+            );
+
+            static_assert(std::is_const_v<std::remove_reference_t<decltype(*values.cbegin())>>);
+
+            EXPECT_EQ(values.data(), values.cbegin());
+            EXPECT_EQ(3, values.cend() - values.cbegin());
+        }
+
+        TEST(circular_array_iterators, rbegin_starts_at_the_last_element) {
+            circular_array values = {1, 2, 3};
+
+            EXPECT_EQ(3, *values.rbegin());
+            EXPECT_EQ(1, *(values.rend() - 1));
+            EXPECT_EQ(3, values.rend() - values.rbegin());
+            EXPECT_EQ(&values.back(), &*values.rbegin());
+
+            const std::vector<int> span{values.begin(), values.end()};
+            EXPECT_EQ(1, span[0]);
+            EXPECT_EQ(2, span[1]);
+            EXPECT_EQ(3, span[2]);
+
+            *values.rbegin() = 30;
+            EXPECT_EQ(1, values[0]);
+            EXPECT_EQ(2, values[1]);
+            EXPECT_EQ(30, values[2]);
+        }
+
+        TEST(circular_array_iterators, crbegin_and_crend_walk_backwards_constly) {
+            constexpr circular_array values = {1, 2, 3};
+
+            static_assert(
+                std::same_as<
+                    decltype(values.crbegin()), circular_array<int, 3>::const_reverse_iterator
+                >
+            );
+
+            static_assert(std::is_const_v<std::remove_reference_t<decltype(*values.crbegin())>>);
+
+            EXPECT_EQ(3, *values.crbegin());
+            EXPECT_EQ(1, *(values.crend() - 1));
+            EXPECT_EQ(3, values.crend() - values.crbegin());
+
+            const std::vector<int> span{values.crbegin(), values.crend()};
+            EXPECT_EQ(3, span[0]);
+            EXPECT_EQ(2, span[1]);
+            EXPECT_EQ(1, span[2]);
+            EXPECT_THAT(
+                (std::vector(values.crbegin(), values.crend())), testing::ElementsAre(3, 2, 1)
+            );
+        }
+    } // namespace iterator_tests
+
     // ── Method Tests ────────────────────────────────────────────────────────────────────────────
     namespace methods_tests {
         TEST(circular_array_methods, at_mut_overload_returns_mut_ref) {
@@ -643,117 +755,4 @@ namespace collections::circular_array_testing {
             SUCCEED();
         }
     } // namespace methods_tests
-
-    // ── Iterator Tests ──────────────────────────────────────────────────────────────────────────
-    namespace iterator_tests {
-        TEST(circular_array_iterators, satisfies_contiguous_range) {
-            static_assert(std::ranges::contiguous_range<circular_array<int, 3>>);
-
-            static_assert(std::ranges::contiguous_range<const circular_array<int, 3>>);
-            static_assert(std::ranges::sized_range<circular_array<int, 3>>);
-
-            static_assert(std::same_as<std::ranges::range_value_t<circular_array<int, 3>>, int>);
-
-            static_assert(
-                std::same_as<
-                    decltype(
-                        std::declval<circular_array<int, 3>&>().begin()
-                    ), circular_array<int, 3>::iterator
-                >
-            );
-
-            static_assert(
-                std::same_as<decltype(std::declval<const circular_array<int, 3>&>().begin()),
-                circular_array<int, 3>::const_iterator>
-            );
-
-            SUCCEED();
-        }
-
-        TEST(circular_array_iterators, begin_and_end_span_the_array) {
-            static_assert([] -> bool {
-                circular_array values = {1, 2, 3};
-                *values.begin() = 10;
-                return 10 == values[0] && values.end() - values.begin() == 3;
-            }());
-
-            circular_array values = {1, 2, 3};
-
-            EXPECT_EQ(values.data(), values.begin());
-            EXPECT_EQ(values.data() + 3, values.end());
-            EXPECT_EQ(3, values.end() - values.begin());
-            EXPECT_EQ(1, *values.begin());
-            EXPECT_EQ(3, *(values.end() - 1));
-        }
-
-        TEST(circular_array_iterators, a_const_array_is_iterable_with_a_range_for) {
-            constexpr circular_array values = {1, 2, 3};
-
-            int sum = 0;
-            for (const int value : values) {
-                sum += value;
-            }
-
-            EXPECT_EQ(6, sum);
-            EXPECT_EQ(values.data(), values.begin());
-            EXPECT_EQ(3, values.end() - values.begin());
-        }
-
-        TEST(circular_array_iterators, cbegin_and_cend_are_const_on_a_mutable_array) {
-            circular_array values = {1, 2, 3};
-
-            static_assert(
-                std::same_as<decltype(values.cbegin()), circular_array<int, 3>::const_iterator>
-            );
-
-            static_assert(std::is_const_v<std::remove_reference_t<decltype(*values.cbegin())>>);
-
-            EXPECT_EQ(values.data(), values.cbegin());
-            EXPECT_EQ(3, values.cend() - values.cbegin());
-        }
-
-        TEST(circular_array_iterators, rbegin_starts_at_the_last_element) {
-            circular_array values = {1, 2, 3};
-
-            EXPECT_EQ(3, *values.rbegin());
-            EXPECT_EQ(1, *(values.rend() - 1));
-            EXPECT_EQ(3, values.rend() - values.rbegin());
-            EXPECT_EQ(&values.back(), &*values.rbegin());
-
-            const std::vector<int> span{values.begin(), values.end()};
-            EXPECT_EQ(1, span[0]);
-            EXPECT_EQ(2, span[1]);
-            EXPECT_EQ(3, span[2]);
-
-            *values.rbegin() = 30;
-            EXPECT_EQ(1, values[0]);
-            EXPECT_EQ(2, values[1]);
-            EXPECT_EQ(30, values[2]);
-        }
-
-        TEST(circular_array_iterators, crbegin_and_crend_walk_backwards_constly) {
-            constexpr circular_array values = {1, 2, 3};
-
-            static_assert(
-                std::same_as<
-                    decltype(values.crbegin()), circular_array<int, 3>::const_reverse_iterator
-                >
-            );
-
-            static_assert(std::is_const_v<std::remove_reference_t<decltype(*values.crbegin())>>);
-
-            EXPECT_EQ(3, *values.crbegin());
-            EXPECT_EQ(1, *(values.crend() - 1));
-            EXPECT_EQ(3, values.crend() - values.crbegin());
-
-            const std::vector<int> span{values.crbegin(), values.crend()};
-            EXPECT_EQ(3, span[0]);
-            EXPECT_EQ(2, span[1]);
-            EXPECT_EQ(1, span[2]);
-            EXPECT_THAT(
-                (std::vector(values.crbegin(), values.crend())), testing::ElementsAre(3, 2, 1)
-            );
-        }
-    } // namespace iterator_tests
-
 } // namespace collections::circular_array_testing
