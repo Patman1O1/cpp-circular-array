@@ -51,6 +51,10 @@ namespace collections {
 
     private:
         // ── Methods ─────────────────────────────────────────────────────────────────────────────
+        [[gnu::always_inline]] static constexpr auto _wrap_index(const size_type index,
+                                                                 const difference_type dis)
+            noexcept -> difference_type { return index + (((dis % N) + N) % N); }
+
         [[gnu::always_inline]] static constexpr auto _move_ptr(pointer ptr,
                                                                const difference_type dis)
             noexcept -> pointer { return ptr + (((dis % N) + N) % N); }
@@ -308,11 +312,11 @@ namespace collections {
         [[nodiscard]] constexpr auto operator<=>(const circular_array&) const = default;
 
         [[nodiscard]] constexpr auto operator[](const difference_type index) noexcept -> reference {
-            return *_move_ptr(this->values_, index);
+            return this->values_[index];
         }
 
         [[nodiscard]] constexpr auto operator[](const difference_type index)
-            const noexcept -> const_reference { return *_move_ptr(this->values_, index); }
+            const noexcept -> const_reference { return this->values_[index]; }
 
         // ── Methods ──────────────────────────────────────────────────────────────────────────────────
         [[nodiscard]] constexpr auto at(const difference_type index) noexcept -> reference {
