@@ -53,8 +53,8 @@ namespace collections {
         // ── Methods ─────────────────────────────────────────────────────────────────────────────
         [[gnu::always_inline]] static constexpr auto _move_ptr(
             pointer ptr,
-            const difference_type n
-        ) noexcept -> pointer { return ptr[n % N]; }
+            const difference_type d
+        ) noexcept -> pointer { return ptr + (((d % N) + N) % N); }
 
         template<std::predicate<bool, value_type, value_type> Predicate>
         constexpr void _sort(iterator first, iterator last, Predicate pred) {
