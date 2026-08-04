@@ -284,7 +284,9 @@ namespace collections {
             }
 
             [[nodiscard]] constexpr auto operator-(const difference_type n)
-                const noexcept -> const_iterator { return const_iterator{this->ptr_ - n}; }
+                const noexcept -> const_iterator {
+                return const_iterator{_move_ptr(this->ptr_, -n)};
+            }
 
             [[nodiscard]] constexpr auto operator-(const const_iterator& other)
                 const noexcept -> difference_type { return this->ptr_ - other.ptr_; }
