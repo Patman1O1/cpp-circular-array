@@ -103,7 +103,7 @@ namespace collections {
             // ── Constructors ────────────────────────────────────────────────────────────────────
             constexpr iterator() noexcept : ptr_(nullptr) {}
 
-            explicit constexpr iterator(const pointer ptr) noexcept : ptr_(ptr) {}
+            explicit constexpr iterator(pointer ptr) noexcept : ptr_(ptr) {}
 
             constexpr iterator(const iterator&) noexcept = default;
 
