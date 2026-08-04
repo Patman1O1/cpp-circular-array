@@ -56,6 +56,10 @@ namespace collections {
             const difference_type n
         ) noexcept -> pointer { return ptr[n % N]; }
 
+        [[gnu::always_inline]] static constexpr auto _wrap_index(pointer ptr,
+                                                                 const difference_type i)
+            noexcept -> difference_type { return ptr[((i % N) + N) % N]; }
+
         template<std::predicate<bool, value_type, value_type> Predicate>
         constexpr void _sort(iterator first, iterator last, Predicate pred) {
             std::sort(first, last, pred);
