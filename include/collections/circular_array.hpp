@@ -51,10 +51,6 @@ namespace collections {
 
     private:
         // ── Methods ─────────────────────────────────────────────────────────────────────────────
-        [[gnu::always_inline]] static constexpr auto _wrap_index(const size_type index,
-                                                                 const difference_type dis)
-            noexcept -> difference_type { return index + (((dis % N) + N) % N); }
-
         [[gnu::always_inline]] static constexpr auto _move_ptr(pointer ptr,
                                                                const difference_type dis)
             noexcept -> pointer { return ptr + (((dis % N) + N) % N); }
