@@ -313,18 +313,12 @@ namespace collections {
             const noexcept -> const_reference { return *_move_ptr(this->values_, index); }
 
         // ── Methods ──────────────────────────────────────────────────────────────────────────────────
-        [[nodiscard]] constexpr auto at(const size_type index) -> reference {
-            if (index >= N) [[unlikely]] {
-                throw std::out_of_range("collections::circular_::at index out of range");
-            }
-            return this->values_[index];
+        [[nodiscard]] constexpr auto at(const difference_type index) noexcept -> reference {
+            return *_move_ptr(this->values_, index);
         }
 
-        [[nodiscard]] constexpr auto at(const size_type index) const -> const_reference {
-            if (index >= N) [[unlikely]] {
-                throw std::out_of_range("collections::array::at index out of range");
-            }
-            return this->values_[index];
+        [[nodiscard]] constexpr auto at(const difference_type index) const noexcept -> const_reference {
+            return *_move_ptr(this->values_, index);
         }
 
         [[nodiscard]] constexpr auto front() noexcept -> reference {
