@@ -46,14 +46,37 @@ namespace collections {
         // ── error ───────────────────────────────────────────────────────────────────────────────
         enum class error : std::uint8_t { out_of_range };
 
-        // ── Fields ──────────────────────────────────────────────────────────────────────────────
+        // ── Fields ────────────────────────────────────────────────────────────────────────────── 
         value_type values_[N];
 
     private:
         // ── Methods ─────────────────────────────────────────────────────────────────────────────
-        [[gnu::always_inline]] static constexpr auto _move_ptr(pointer ptr,
-                                                               const difference_type dis)
-            noexcept -> pointer { return ptr + (((dis % N) + N) % N); }
+        static constexpr auto _move_ptr(
+            const_pointer ptr,
+            const_pointer start_ptr,
+            const difference_type displacement
+        ) noexcept -> const_pointer {
+            constexpr auto signed_n = static_cast<difference_type>(N);
+            const difference_type offset = ptr - start_ptr;
+            return start_ptr + ((offset + (displacement % signed_n + signed_n)) % signed_n);
+        }
+
+        static constexpr auto _move_ptr(
+            pointer ptr,
+            pointer start_ptr,
+            const difference_type displacement
+        ) noexcept -> pointer {
+            return const_cast<pointer>(_move_ptr(
+                static_cast<const_pointer>(ptr),
+                static_cast<const_pointer>(start_ptr),
+                displacement
+            ));
+        }
+
+        [[gnu::always_inline]] [[nodiscard]] constexpr auto _end_ptr()
+            const noexcept -> const_pointer {
+            return std::data(this->values_) + N;
+        }
 
         template<std::predicate<bool, value_type, value_type> Predicate>
         constexpr void _sort(iterator first, iterator last, Predicate pred) {
@@ -173,6 +196,10 @@ namespace collections {
 
             [[nodiscard]] constexpr auto operator[](const difference_type n)
                 const noexcept -> reference { return *_move_ptr(this->ptr_, n); }
+
+            [[nodiscard]] explicit constexpr operator const_iterator() noexcept {
+                return const_iterator{const_cast<const_pointer>(this->ptr_)};
+            }
         };
 
         // ── const_iterator ──────────────────────────────────────────────────────────────────────
@@ -308,11 +335,11 @@ namespace collections {
         [[nodiscard]] constexpr auto operator<=>(const circular_array&) const = default;
 
         [[nodiscard]] constexpr auto operator[](const difference_type index) noexcept -> reference {
-            return this->values_[index];
+            return *_move_ptr(this->values_, index);
         }
 
         [[nodiscard]] constexpr auto operator[](const difference_type index)
-            const noexcept -> const_reference { return this->values_[index]; }
+            const noexcept -> const_reference { return *_move_ptr(this->values_, index); }
 
         // ── Methods ──────────────────────────────────────────────────────────────────────────────────
         [[nodiscard]] constexpr auto at(const difference_type index) noexcept -> reference {
