@@ -19,12 +19,12 @@ namespace collections {
     template<typename T, std::size_t N>
     class circular_array {
     public:
-        // ── Forward Declarations ──────────────────────────────────────────────────────────────────────
+        // ── Forward Declarations ────────────────────────────────────────────
         class iterator;
 
         class const_iterator;
 
-        // ── Aliases ───────────────────────────────────────────────────────────────────────────────────
+        // ── Aliases ─────────────────────────────────────────────────────────
         using value_type = T;
 
         using size_type = std::size_t;
@@ -43,27 +43,34 @@ namespace collections {
 
         using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
-        // ── error ───────────────────────────────────────────────────────────────────────────────
+        // ── error ───────────────────────────────────────────────────────────
         enum class error : std::uint8_t { out_of_range };
 
-        // ── Fields ────────────────────────────────────────────────────────────────────────────── 
+        // ── Fields ──────────────────────────────────────────────────────────
         value_type values_[N];
 
     private:
-        // ── Methods ─────────────────────────────────────────────────────────────────────────────
+        // ── Friends ─────────────────────────────────────────────────────────
+        friend class iterator;
+
+        friend class const_iterator;
+
+        // ── Methods ─────────────────────────────────────────────────────────
         [[gnu::always_inline]] [[nodiscard]] constexpr auto _ptr()
             const noexcept -> const_pointer { return std::data(this->values_); }
         
         [[gnu::always_inline]] [[nodiscard]] constexpr auto _ptr()
-            const noexcept -> pointer { return const_cast<pointer>(this->_ptr()); }
+            noexcept -> pointer {
+            return const_cast<pointer>(std::data(this->values_));
+        }
         
         constexpr auto _move_ptr(
             const_pointer ptr,
             const difference_type displacement
         ) const noexcept -> const_pointer {
             constexpr auto signed_n = static_cast<difference_type>(N);
-            const difference_type offset = ptr - this->_ptr();
-            return this->_ptr() +
+            const difference_type offset = ptr - std::data(this->values_);
+            return std::data(this->values_) +
                    ((offset + (displacement % signed_n + signed_n)) % signed_n);
         }
 
@@ -86,10 +93,10 @@ namespace collections {
         }
 
     public:
-        // ── iterator ────────────────────────────────────────────────────────────────────────────
+        // ── iterator ────────────────────────────────────────────────────────
         class iterator {
         public:
-            // ── Aliases ─────────────────────────────────────────────────────────────────────────
+            // ── Aliases ─────────────────────────────────────────────────────
             using iterator_category = std::random_access_iterator_tag;
 
             using iterator_concept = std::contiguous_iterator_tag;
@@ -111,44 +118,54 @@ namespace collections {
             using const_reference = const value_type&;
 
         private:
-            // ── Friends ─────────────────────────────────────────────────────────────────────────
+            // ── Friends ─────────────────────────────────────────────────────
             friend class circular_array;
 
             friend class const_iterator;
 
-            // ── Fields ──────────────────────────────────────────────────────────────────────────
+            // ── Fields ──────────────────────────────────────────────────────
+            const circular_array* circ_arr_;
+
             pointer ptr_;
 
         public:
-            // ── Constructors ────────────────────────────────────────────────────────────────────
-            constexpr iterator() noexcept : ptr_(nullptr) {}
+            // ── Constructors ────────────────────────────────────────────────
+            constexpr iterator()
+                noexcept : circ_arr_(nullptr), ptr_(nullptr) {}
 
-            explicit constexpr iterator(pointer ptr) noexcept : ptr_(ptr) {}
+            explicit constexpr iterator(const circular_array& circ_arr)
+                noexcept : circ_arr_(&circ_arr), ptr_(circ_arr._ptr()) {}
+            
+            constexpr iterator(const circular_array& circ_arr, pointer ptr)
+                noexcept : circ_arr_(&circ_arr), ptr_(ptr) {}
 
             constexpr iterator(const iterator&) noexcept = default;
 
             constexpr iterator(iterator&&) noexcept = default;
 
-            // ── Overloaded Operators ────────────────────────────────────────────────────────────
-            constexpr auto operator=(const iterator&) noexcept -> iterator& = default;
+            // ── Overloaded Operators ────────────────────────────────────────
+            constexpr auto operator=(const iterator&)
+                noexcept -> iterator& = default;
 
-            constexpr auto operator=(iterator&&) noexcept -> iterator& = default;
+            constexpr auto operator=(iterator&&)
+                noexcept -> iterator& = default;
 
-            [[nodiscard]] constexpr auto operator==(const iterator&)
-                const noexcept -> bool = default;
+            [[gnu::always_inline]] [[nodiscard]] constexpr auto operator==(
+                const iterator& other
+            ) const noexcept -> bool { return this->ptr_ == other.ptr_; }
 
-            [[nodiscard]] constexpr auto operator<=>(const iterator&) const noexcept = default;
+            [[gnu::always_inline]] [[nodiscard]] constexpr auto operator<=>(
+                const iterator& other
+            ) const noexcept { return this->ptr_ <=> other.ptr_; }
 
-            [[nodiscard]] constexpr auto operator*() const noexcept -> reference {
-                return *this->ptr_;
-            }
+            [[gnu::always_inline]] [[nodiscard]] constexpr auto operator*()
+                const noexcept -> reference { return *this->ptr_; }
 
-            [[nodiscard]] constexpr auto operator->() const noexcept -> pointer {
-                return this->ptr_;
-            }
+            [[gnu::always_inline]] [[nodiscard]] constexpr auto operator->()
+                const noexcept -> pointer { return this->ptr_; }
 
             constexpr auto operator++() noexcept -> iterator& {
-                this->ptr_ = _move_ptr(this->ptr_, 1);
+                this->ptr_ = this->circ_arr_->_move_ptr(this->ptr_, 1);
                 return *this;
             }
 
@@ -158,19 +175,27 @@ namespace collections {
                 return tmp;
             }
 
-            constexpr auto operator+=(const difference_type n) noexcept -> iterator& {
-                this->ptr_ = _move_ptr(this->ptr_, n);
+            constexpr auto operator+=(const difference_type n)
+                noexcept -> iterator& {
+                this->ptr_ = this->circ_arr_->_move_ptr(this->ptr_, n);
                 return *this;
             }
 
             [[nodiscard]] constexpr auto operator+(const difference_type n)
-                const noexcept -> iterator { return iterator{_move_ptr(this->ptr_, n)}; }
+                const noexcept -> iterator {
+                return iterator{
+                    *this->circ_arr_, 
+                    this->circ_arr_->_move_ptr(this->ptr_, n)
+                };
+            }
 
-            friend constexpr auto operator+(const difference_type n, const iterator& it)
-                noexcept -> iterator { return _move_ptr(it, n); }
+            friend constexpr auto operator+(
+                const difference_type n, 
+                const iterator& it
+            ) noexcept -> iterator { return it + n; }
 
             constexpr auto operator--() noexcept -> iterator& {
-                this->ptr_ = _move_ptr(this->ptr_, -1);
+                this->ptr_ = this->circ_arr_->_move_ptr(this->ptr_, -1);
                 return *this;
             }
 
@@ -181,28 +206,39 @@ namespace collections {
             }
 
             constexpr auto operator-=(const difference_type n) noexcept -> iterator& {
-                this->ptr_ = _move_ptr(this->ptr_, -n);
+                this->ptr_ = this->circ_arr_->_move_ptr(this->ptr_, -n);
                 return *this;
             }
 
             [[nodiscard]] constexpr auto operator-(const difference_type n)
-                const noexcept -> iterator { return iterator{_move_ptr(this->ptr_, -n)}; }
+                const noexcept -> iterator {
+                return iterator{
+                    *this->circ_arr_,
+                    this->circ_arr_->_move_ptr(this->ptr_, -n)
+                };
+            }
 
-            [[nodiscard]] constexpr auto operator-(const iterator& other)
-                const noexcept -> difference_type { return this->ptr_ - other.ptr_; }
+            [[gnu::always_inline]] [[nodiscard]] constexpr auto operator-(
+                const iterator& other
+            ) const noexcept -> difference_type {
+                return this->ptr_ - other.ptr_;
+            }
 
             [[nodiscard]] constexpr auto operator[](const difference_type n)
-                const noexcept -> reference { return *_move_ptr(this->ptr_, n); }
+                const noexcept -> reference {
+                return *this->circ_arr_->_move_ptr(this->ptr_, n);
+            }
 
-            [[nodiscard]] explicit constexpr operator const_iterator() noexcept {
-                return const_iterator{const_cast<const_pointer>(this->ptr_)};
+            [[nodiscard]] explicit constexpr operator const_iterator()
+                noexcept {
+                return const_iterator{*this->circ_arr_, this->ptr_};
             }
         };
 
-        // ── const_iterator ──────────────────────────────────────────────────────────────────────
+        // ── const_iterator ──────────────────────────────────────────────────
         class const_iterator {
         public:
-            // ── Aliases ─────────────────────────────────────────────────────────────────────────
+            // ── Aliases ─────────────────────────────────────────────────────
             using iterator_category = std::random_access_iterator_tag;
 
             using iterator_concept = std::contiguous_iterator_tag;
@@ -224,51 +260,62 @@ namespace collections {
             using const_reference = const value_type&;
 
         private:
-            // ── Friends ─────────────────────────────────────────────────────────────────────────
+            // ── Friends ─────────────────────────────────────────────────────
             friend class circular_array;
 
-            // ── Fields ──────────────────────────────────────────────────────────────────────────
+            // ── Fields ──────────────────────────────────────────────────────
+            const circular_array* circ_arr_;
+
             const_pointer ptr_;
 
         public:
-            // ── Constructors ────────────────────────────────────────────────────────────────────
-            constexpr const_iterator() noexcept : ptr_(nullptr) {}
+            // ── Constructors ────────────────────────────────────────────────
+            constexpr const_iterator()
+                noexcept : circ_arr_(nullptr), ptr_(nullptr) {}
 
-            explicit constexpr const_iterator(const const_pointer ptr) noexcept : ptr_(ptr) {}
+            explicit constexpr const_iterator(const circular_array& circ_arr)
+                noexcept : circ_arr_(&circ_arr), ptr_(circ_arr._ptr()) {}
+            
+            constexpr const_iterator(
+                const circular_array& circ_arr,
+                const_pointer ptr
+            ) noexcept : circ_arr_(&circ_arr), ptr_(ptr) {}
 
             constexpr const_iterator(const const_iterator&) noexcept = default;
 
             constexpr const_iterator(const_iterator&&) noexcept = default;
 
-            // ── Overloaded Operators ────────────────────────────────────────────────────────────
-            constexpr auto operator=(const const_iterator&) noexcept -> const_iterator& = default;
+            // ── Overloaded Operators ────────────────────────────────────────
+            constexpr auto operator=(const const_iterator&)
+                noexcept -> const_iterator& = default;
 
-            constexpr auto operator=(const_iterator&&) noexcept -> const_iterator& = default;
+            constexpr auto operator=(const_iterator&&)
+                noexcept -> const_iterator& = default;
 
-            [[nodiscard]] constexpr auto operator==(const const_iterator&)
-                const noexcept -> bool = default;
+            [[gnu::always_inline]] [[nodiscard]] constexpr auto operator==(
+                const const_iterator& other
+            ) const noexcept -> bool { return this->ptr_ == other.ptr_; }
 
-            [[nodiscard]] constexpr auto operator<=>(const const_iterator&)
-                const noexcept = default;
+            [[gnu::always_inline]] [[nodiscard]] constexpr auto operator<=>(
+                const const_iterator& other
+            ) const noexcept { return this->ptr_ <=> other.ptr_; }
 
-            [[nodiscard]] constexpr auto operator==(const iterator& other) const noexcept -> bool {
-                return this->ptr_ == other.ptr_;
-            }
+            [[gnu::always_inline]] [[nodiscard]] constexpr auto operator==(
+                const iterator& other
+            ) const noexcept -> bool { return this->ptr_ == other.ptr_; }
 
-            [[nodiscard]] constexpr auto operator<=>(const iterator& other) const noexcept {
-                return this->ptr_ <=> other.ptr_;
-            }
+            [[gnu::always_inline]] [[nodiscard]] constexpr auto operator<=>(
+                const iterator& other
+            ) const noexcept { return this->ptr_ <=> other.ptr_; }
 
-            [[nodiscard]] constexpr auto operator*() const noexcept -> const_reference {
-                return *this->ptr_;
-            }
+            [[gnu::always_inline]] [[nodiscard]] constexpr auto operator*()
+                const noexcept -> const_reference { return *this->ptr_; }
 
-            [[nodiscard]] constexpr auto operator->() const noexcept -> const_pointer {
-                return this->ptr_;
-            }
+            [[gnu::always_inline]] [[nodiscard]] constexpr auto operator->()
+                const noexcept -> const_pointer { return this->ptr_; }
 
             constexpr auto operator++() noexcept -> const_iterator& {
-                this->ptr_ = const_cast<const_pointer>(_move_ptr(this->ptr_, 1));
+                this->ptr_ = this->circ_arr_->_move_ptr(this->ptr_, 1);
                 return *this;
             }
 
@@ -278,21 +325,27 @@ namespace collections {
                 return tmp;
             }
 
-            constexpr auto operator+=(const difference_type n) noexcept -> const_iterator& {
-                this->ptr_ = const_cast<const_pointer>(_move_ptr(this->ptr_, n));
+            constexpr auto operator+=(const difference_type n)
+                noexcept -> const_iterator& {
+                this->ptr_ = this->circ_arr_->_move_ptr(this->ptr_, n);
                 return *this;
             }
 
             [[nodiscard]] constexpr auto operator+(const difference_type n)
                 const noexcept -> const_iterator {
-                return const_iterator{_move_ptr(this->ptr_, n)};
+                return const_iterator{
+                    *this->circ_arr_,
+                    this->circ_arr_->_move_ptr(this->ptr_, n)
+                };
             }
 
-            friend constexpr auto operator+(const difference_type n, const const_iterator& it)
-                noexcept -> const_iterator { return it + n; }
+            friend constexpr auto operator+(
+                const difference_type n, 
+                const const_iterator& it
+            ) noexcept -> const_iterator { return it + n; }
 
             constexpr auto operator--() noexcept -> const_iterator& {
-                this->ptr_ = _move_ptr(this->ptr_, -1);
+                this->ptr_ = this->circ_arr_->_move_ptr(this->ptr_, -1);
                 return *this;
             }
 
@@ -302,97 +355,114 @@ namespace collections {
                 return tmp;
             }
 
-            constexpr auto operator-=(const difference_type n) noexcept -> const_iterator& {
-                this->ptr_ =_move_ptr(this->ptr_, -n);
+            constexpr auto operator-=(const difference_type n)
+                noexcept -> const_iterator& {
+                this->ptr_ = this->circ_arr_->_move_ptr(this->ptr_, -n);
                 return *this;
             }
 
             [[nodiscard]] constexpr auto operator-(const difference_type n)
                 const noexcept -> const_iterator {
-                return const_iterator{_move_ptr(this->ptr_, -n)};
+                return const_iterator{
+                    *this->circ_arr_,
+                    this->circ_arr_->_move_ptr(this->ptr_, -n)
+                };
             }
 
-            [[nodiscard]] constexpr auto operator-(const const_iterator& other)
-                const noexcept -> difference_type { return this->ptr_ - other.ptr_; }
+            [[gnu::always_inline]] [[nodiscard]] constexpr auto operator-(
+                const const_iterator& other
+            ) const noexcept -> difference_type {
+                return this->ptr_ - other.ptr_;
+            }
 
-            [[nodiscard]] constexpr auto operator-(const iterator& other)
-                const noexcept -> difference_type { return this->ptr_ - other.ptr_; }
+            [[gnu::always_inline]] [[nodiscard]] constexpr auto operator-(
+                const iterator& other
+            ) const noexcept -> difference_type {
+                return this->ptr_ - other.ptr_;
+            }
 
-            [[nodiscard]] friend constexpr auto operator-(const iterator& lhs,
-                                                          const const_iterator& rhs)
-                noexcept -> difference_type { return lhs.ptr_ - rhs.ptr_; }
+            [[gnu::always_inline]] [[nodiscard]] friend constexpr auto operator-(
+                const iterator& lhs,
+                const const_iterator& rhs
+            ) noexcept -> difference_type { return lhs.ptr_ - rhs.ptr_; }
 
             [[nodiscard]] constexpr auto operator[](const difference_type n)
-                const noexcept -> const_reference { return *_move_ptr(this->ptr_, n); }
+                const noexcept -> const_reference {
+                return *this->circ_arr_->_move_ptr(this->ptr_, n);
+            }
         };
 
-        // ── Overloaded Operators ────────────────────────────────────────────────────────────────
-        [[nodiscard]] constexpr auto operator==(const circular_array&) const -> bool = default;
+        // ── Overloaded Operators ────────────────────────────────────────────
+        [[nodiscard]] constexpr auto operator==(const circular_array&)
+            const -> bool = default;
 
-        [[nodiscard]] constexpr auto operator<=>(const circular_array&) const = default;
+        [[nodiscard]] constexpr auto operator<=>(const circular_array&)
+            const = default;
 
-        [[nodiscard]] constexpr auto operator[](const difference_type index) noexcept -> reference {
-            return *_move_ptr(this->values_, index);
+        [[nodiscard]] constexpr auto operator[](const difference_type index)
+            noexcept -> reference {
+            return *this->_move_ptr(std::data(this->ptr_), index);
         }
 
         [[nodiscard]] constexpr auto operator[](const difference_type index)
-            const noexcept -> const_reference { return *_move_ptr(this->values_, index); }
-
-        // ── Methods ──────────────────────────────────────────────────────────────────────────────────
-        [[nodiscard]] constexpr auto at(const difference_type index) noexcept -> reference {
-            return *_move_ptr(this->values_, index);
+            const noexcept -> const_reference {
+            return *this->_move_ptr(this->_ptr(), index);
         }
 
-        [[nodiscard]] constexpr auto at(const difference_type index) const noexcept -> const_reference {
-            return *_move_ptr(this->values_, index);
+        // ── Methods ─────────────────────────────────────────────────────────
+        [[nodiscard]] constexpr auto at(const difference_type index)
+            noexcept -> reference {
+            return *this->_move_ptr(this->_ptr(), index);
         }
 
-        [[nodiscard]] constexpr auto front() noexcept -> reference {
-            return this->values_[0];
+        [[nodiscard]] constexpr auto at(const difference_type index)
+            const noexcept -> const_reference {
+            return *this->_move_ptr(this->_ptr(), index);
         }
 
-        [[nodiscard]] constexpr auto front() const noexcept -> const_reference {
-            return this->values_[0];
-        }
+        [[gnu::always_inline]] [[nodiscard]] constexpr auto front()
+            noexcept -> reference { return this->values_[0]; }
 
-        [[nodiscard]] constexpr auto back() noexcept -> reference {
+        [[gnu::always_inline]] [[nodiscard]] constexpr auto front()
+            const noexcept -> const_reference { return this->values_[0]; }
+
+        [[gnu::always_inline]] [[nodiscard]] constexpr auto back()
+            noexcept -> reference { return this->values_[this->size() - 1]; }
+
+        [[gnu::always_inline]] [[nodiscard]] constexpr auto back()
+            const noexcept -> const_reference {
             return this->values_[this->size() - 1];
         }
 
-        [[nodiscard]] constexpr auto back() const noexcept -> const_reference {
-            return this->values_[this->size() - 1];
-        }
+        [[gnu::always_inline]] [[nodiscard]] constexpr auto data()
+            noexcept -> pointer { return this->values_; }
 
-        [[nodiscard]] constexpr auto data() noexcept -> pointer {
-            return this->values_;
-        }
-
-        [[nodiscard]] constexpr auto data() const noexcept -> const_pointer {
-            return this->values_;
-        }
+        [[gnu::always_inline]] [[nodiscard]] constexpr auto data()
+            const noexcept -> const_pointer { return this->values_; }
 
         [[nodiscard]] constexpr auto begin() noexcept -> iterator {
-            return iterator{this->values_};
+            return iterator{*this};
         }
 
         [[nodiscard]] constexpr auto end() noexcept -> iterator {
-            return iterator{this->values_ + N};
+            return iterator{*this, this->values_ + N};
         }
 
         [[nodiscard]] constexpr auto begin() const noexcept -> const_iterator {
-            return const_iterator{this->values_};
+            return const_iterator{*this};
         }
 
         [[nodiscard]] constexpr auto end() const noexcept -> const_iterator {
-            return const_iterator{this->values_ + N};
+            return const_iterator{*this, this->values_ + N};
         }
 
-        [[nodiscard]] constexpr auto cbegin() const noexcept -> const_iterator {
-            return const_iterator{this->values_};
+        [[nodiscard]] constexpr auto cbegin()
+            const noexcept -> const_iterator {
+            return const_iterator{*this};
         }
 
         [[nodiscard]] constexpr auto cend() const noexcept -> const_iterator {
-            return const_iterator{this->values_ + N};
+            return const_iterator{*this, this->values_ + N};
         }
 
         [[nodiscard]] constexpr auto rbegin() noexcept -> reverse_iterator {
@@ -403,27 +473,34 @@ namespace collections {
             return reverse_iterator(this->begin());
         }
 
-        [[nodiscard]] constexpr auto rbegin() const noexcept -> const_reverse_iterator {
+        [[nodiscard]] constexpr auto rbegin()
+            const noexcept -> const_reverse_iterator {
             return const_reverse_iterator(this->end());
         }
 
-        [[nodiscard]] constexpr auto rend() const noexcept -> const_reverse_iterator {
+        [[nodiscard]] constexpr auto rend()
+            const noexcept -> const_reverse_iterator {
             return const_reverse_iterator(this->begin());
         }
 
-        [[nodiscard]] constexpr auto crbegin() const noexcept -> const_reverse_iterator {
+        [[nodiscard]] constexpr auto crbegin()
+            const noexcept -> const_reverse_iterator {
             return this->rbegin();
         }
 
-        [[nodiscard]] constexpr auto crend() const noexcept -> const_reverse_iterator {
+        [[nodiscard]] constexpr auto crend()
+            const noexcept -> const_reverse_iterator {
             return this->rend();
         }
 
-        [[nodiscard]] constexpr auto empty() const noexcept -> bool { return N == 0; }
+        [[gnu::always_inline]] [[nodiscard]] constexpr auto empty()
+            const noexcept -> bool { return N == 0; }
 
-        [[nodiscard]] constexpr auto size() const noexcept -> size_type { return N; }
+        [[gnu::always_inline]] [[nodiscard]] constexpr auto size()
+            const noexcept -> size_type { return N; }
 
-        [[nodiscard]] constexpr auto max_size() const noexcept -> size_type { return N; }
+        [[gnu::always_inline]] [[nodiscard]] constexpr auto max_size()
+            const noexcept -> size_type { return N; }
 
         constexpr void fill(const_reference value)
             noexcept(std::is_nothrow_copy_assignable_v<value_type>) {
@@ -480,7 +557,7 @@ namespace collections {
         }
     };
 
-    // ── Deduction Guides ────────────────────────────────────────────────────────────────────────
+    // ── Deduction Guides ────────────────────────────────────────────────────
     template<typename T, typename... U> requires (std::same_as<T, U> && ...)
     circular_array(T, U...) -> circular_array<T, 1 + sizeof...(U)>;
 
