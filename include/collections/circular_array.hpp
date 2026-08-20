@@ -401,23 +401,23 @@ namespace collections {
 
         [[nodiscard]] constexpr auto operator[](const difference_type index)
             noexcept -> reference {
-            return *this->_move_ptr(std::data(this->ptr_), index);
+            return *this->_move_ptr(std::data(this->values_), index);
         }
 
         [[nodiscard]] constexpr auto operator[](const difference_type index)
             const noexcept -> const_reference {
-            return *this->_move_ptr(this->_ptr(), index);
+            return *this->_move_ptr(std::data(this->values_), index);
         }
 
         // ── Methods ─────────────────────────────────────────────────────────
         [[nodiscard]] constexpr auto at(const difference_type index)
             noexcept -> reference {
-            return *this->_move_ptr(this->_ptr(), index);
+            return *this->_move_ptr(std::data(this->values_), index);
         }
 
         [[nodiscard]] constexpr auto at(const difference_type index)
             const noexcept -> const_reference {
-            return *this->_move_ptr(this->_ptr(), index);
+            return *this->_move_ptr(std::data(this->values_), index);
         }
 
         [[gnu::always_inline]] [[nodiscard]] constexpr auto front()
