@@ -134,7 +134,8 @@ namespace collections {
                 noexcept : circ_arr_(nullptr), ptr_(nullptr) {}
 
             explicit constexpr iterator(const circular_array& circ_arr)
-                noexcept : circ_arr_(&circ_arr), ptr_(circ_arr._ptr()) {}
+                noexcept : circ_arr_(&circ_arr), 
+                           ptr_(const_cast<pointer>(std::data(circ_arr.values_))) {}
             
             constexpr iterator(const circular_array& circ_arr, pointer ptr)
                 noexcept : circ_arr_(&circ_arr), ptr_(ptr) {}
