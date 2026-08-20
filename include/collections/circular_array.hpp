@@ -75,11 +75,6 @@ namespace collections {
             ));
         }
 
-        [[gnu::always_inline]] [[nodiscard]] constexpr auto _end_ptr()
-            const noexcept -> const_pointer {
-            return std::data(this->values_) + N;
-        }
-
         template<std::predicate<bool, value_type, value_type> Predicate>
         constexpr void _sort(iterator first, iterator last, Predicate pred) {
             std::sort(first, last, pred);
