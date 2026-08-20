@@ -51,6 +51,12 @@ namespace collections {
 
     private:
         // ── Methods ─────────────────────────────────────────────────────────────────────────────
+        [[gnu::always_inline]] [[nodiscard]] constexpr auto _ptr()
+            const noexcept -> const_pointer { return std::data(this->values_); }
+        
+        [[gnu::always_inline]] [[nodiscard]] constexpr auto _ptr()
+            const noexcept -> pointer { return const_cast<pointer>(this->_ptr()); }
+        
         static constexpr auto _move_ptr(
             const_pointer ptr,
             const_pointer start_ptr,
