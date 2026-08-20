@@ -57,24 +57,20 @@ namespace collections {
         [[gnu::always_inline]] [[nodiscard]] constexpr auto _ptr()
             const noexcept -> pointer { return const_cast<pointer>(this->_ptr()); }
         
-        static constexpr auto _move_ptr(
+        constexpr auto _move_ptr(
             const_pointer ptr,
-            const_pointer start_ptr,
             const difference_type displacement
-        ) noexcept -> const_pointer {
+        ) const noexcept -> const_pointer {
             constexpr auto signed_n = static_cast<difference_type>(N);
-            const difference_type offset = ptr - start_ptr;
-            return start_ptr + ((offset + (displacement % signed_n + signed_n)) % signed_n);
+            const difference_type offset = ptr - this->_ptr();
+            return this->_ptr() +
+                   ((offset + (displacement % signed_n + signed_n)) % signed_n);
         }
 
-        static constexpr auto _move_ptr(
-            pointer ptr,
-            pointer start_ptr,
-            const difference_type displacement
-        ) noexcept -> pointer {
-            return const_cast<pointer>(_move_ptr(
+        constexpr auto _move_ptr(pointer ptr, const difference_type displacement)
+            const noexcept -> pointer {
+            return const_cast<pointer>(this->_move_ptr(
                 static_cast<const_pointer>(ptr),
-                static_cast<const_pointer>(start_ptr),
                 displacement
             ));
         }
