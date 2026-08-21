@@ -612,7 +612,7 @@ namespace collections::circular_array_testing {
                 return 10 == values[0] && values.end() - values.begin() == 3;
             }());
 
-            circular_array values = {1, 2, 3};
+            const circular_array values = {1, 2, 3};
 
             EXPECT_EQ(values.data(), values.begin());
             EXPECT_EQ(values.data() + 3, values.end());
