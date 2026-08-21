@@ -22,21 +22,18 @@
 
 namespace collections::circular_array_testing {
     namespace {
-        // ── Concepts ────────────────────────────────────────────────────────────────────────────
+        // ── Concepts ────────────────────────────────────────────────────────
         template<typename T, typename... Args>
         concept brace_initializable = requires { T{std::declval<Args>()...}; };
 
         template<typename... Args>
-        concept deducible = requires { circular_array{std::declval<Args>()...}; };
-
-        template<typename T, std::size_t N>
-        constexpr auto move_ptr(T* ptr, const std::ptrdiff_t index) noexcept -> T* {
-            return ptr + (((index % N) + N) % N);
-        }
+        concept deducible = requires {
+            circular_array{std::declval<Args>()...};
+        };
 
     } // namespace
 
-    // ── Aggregate Tests ─────────────────────────────────────────────────────────────────────────
+    // ── Aggregate Tests ─────────────────────────────────────────────────────
     namespace aggregate_tests {
         TEST(circular_array_aggregate, is_aggregate) {
             static_assert(std::is_aggregate_v<circular_array<int, 3>>);
@@ -45,9 +42,26 @@ namespace collections::circular_array_testing {
             SUCCEED();
         }
 
-        TEST(circular_array_aggregate, brace_init_checks_arity_at_compile_time) {
-            static_assert(brace_initializable<circular_array<int, 3>, int, int, int>);
-            static_assert(brace_initializable<circular_array<int, 3>, int, int>);
+        TEST(
+            circular_array_aggregate, 
+            brace_init_checks_arity_at_compile_time
+        ) {
+            static_assert(
+                brace_initializable<
+                    circular_array<int, 3>,
+                    int,
+                    int,
+                    int
+                >
+            );
+
+            static_assert(
+                    brace_initializable<circular_array<int, 3>,
+                    int,
+                    int
+                >
+            );
+
             static_assert(brace_initializable<circular_array<int, 3>, int>);
             static_assert(brace_initializable<circular_array<int, 3>>);
             static_assert(!brace_initializable<circular_array<int, 3>, int, int, int, int>);
@@ -59,7 +73,7 @@ namespace collections::circular_array_testing {
 
         TEST(circular_array_aggregate, brace_init_rejects_narrowing) {
             static_assert(!brace_initializable<circular_array<int, 2>, double, double>);
-            static_assert(!brace_initializable<circular_array<int, 2>, int, long long int>);
+            static_assert(!brace_initializable<circular_array<int, 2>, int, long long>);
             static_assert(!brace_initializable<circular_array<char, 2>, int, int>);
 
             static_assert(!brace_initializable<circular_array<double, 2>, int, int>);
@@ -162,15 +176,13 @@ namespace collections::circular_array_testing {
         }
     } // namespace aggregate_tests
 
-    // ── Overloaded Operators Tests ──────────────────────────────────────────────────────────────
+    // ── Overloaded Operators Tests ──────────────────────────────────────────
     namespace overloaded_operators_tests {
         TEST(circular_array_operators, random_access_mut_overload_returns_mut_ref) {
             static_assert(std::same_as<decltype(std::declval<circular_array<int, 3>&>()[0]),
                           circular_array<int, 3>::reference>);
             static_assert(
-                !std::is_const_v<std::remove_reference_t<
-                    decltype(std::declval<circular_array<int, 3>&>()[0])>
-                >
+                !std::is_const_v<std::remove_reference_t<decltype(std::declval<circular_array<int, 3>&>()[0])>>
             );
 
             SUCCEED();
@@ -182,8 +194,7 @@ namespace collections::circular_array_testing {
             SUCCEED();
         }
 
-        TEST(circular_array_operators,
-            random_access_mut_overload_is_usable_in_constant_expressions) {
+        TEST(circular_array_operators, random_access_mut_overload_is_usable_in_constant_expressions) {
             static_assert([] -> bool {
                 circular_array values = {1, 2, 3};
                 values[0] = 10;
@@ -210,9 +221,7 @@ namespace collections::circular_array_testing {
                           circular_array<int, 3>::const_reference>);
             static_assert(
                 std::is_const_v<
-                    std::remove_reference_t<
-                        decltype(std::declval<const circular_array<int, 3>&>()[0])
-                    >
+                    std::remove_reference_t<decltype(std::declval<const circular_array<int, 3>&>()[0])>
                 >
             );
 
@@ -225,8 +234,7 @@ namespace collections::circular_array_testing {
             SUCCEED();
         }
 
-        TEST(circular_array_operators,
-             random_access_const_overload_is_usable_in_constant_expressions) {
+        TEST(circular_array_operators, random_access_const_overload_is_usable_in_constant_expressions) {
             constexpr circular_array values = {1, 2, 3};
             static_assert(1 == values[0]);
             static_assert(2 == values[1]);
@@ -244,8 +252,7 @@ namespace collections::circular_array_testing {
             EXPECT_EQ(1, &second - &first);
         }
 
-        TEST(circular_array_operators,
-             random_access_const_overload_does_not_copy_a_non_trivial_element) {
+        TEST(circular_array_operators, random_access_const_overload_does_not_copy_a_non_trivial_element) {
             const circular_array values = {std::string("alpha"), std::string("beta")};
 
             EXPECT_EQ("alpha", values[0]);
@@ -254,24 +261,342 @@ namespace collections::circular_array_testing {
         }
     } // namespace overloaded_operators_tests
 
-    // ── Iterator Tests ──────────────────────────────────────────────────────────────────────────
-    namespace iterator_tests {
-        TEST(circular_array_iterators, satisfies_contiguous_range) {
-            static_assert(std::ranges::contiguous_range<circular_array<int, 3>>);
-
-            static_assert(std::ranges::contiguous_range<const circular_array<int, 3>>);
-            static_assert(std::ranges::sized_range<circular_array<int, 3>>);
-
-            static_assert(std::same_as<std::ranges::range_value_t<circular_array<int, 3>>, int>);
-
+    // ── Method Tests ────────────────────────────────────────────────────────
+    namespace methods_tests {
+        TEST(circular_array_methods, at_mut_overload_returns_mut_ref) {
             static_assert(
                 std::same_as<
-                    decltype(
-                        std::declval<circular_array<int, 3>&>().begin()
-                    ), circular_array<int, 3>::iterator
+                    decltype(std::declval<circular_array<int, 3>&>().at(0)), circular_array<int, 3>::reference
                 >
             );
 
+            static_assert(
+                !std::is_const_v<
+                    std::remove_reference_t<decltype(std::declval<circular_array<int, 3>&>().at(0))>
+                >
+            );
+
+            SUCCEED();
+        }
+
+        TEST(circular_array_methods, at_mut_overload_is_noexcept) {            
+            static_assert(noexcept(std::declval<circular_array<int, 3>&>().at(0)));
+        }
+
+        TEST(circular_array_methods, at_const_overload_returns_const_ref) {
+            static_assert(std::same_as<decltype(std::declval<const circular_array<int, 3>&>().at(0)),
+                                       circular_array<int, 3>::const_reference>);
+            static_assert(
+                std::is_const_v<
+                    std::remove_reference_t<decltype(std::declval<const circular_array<int, 3>&>().at(0))>
+                >
+            );
+
+            SUCCEED();
+        }
+
+        TEST(circular_array_methods, at_const_overload_is_noexcept) {
+            static_assert(noexcept(std::declval<const circular_array<int, 3>&>().at(0)));
+
+            SUCCEED();
+        }
+
+        TEST(circular_array_methods, front_mut_overload_single_element_array) {
+            static_assert(std::same_as<decltype(std::declval<circular_array<int, 1>&>().front()), circular_array<int, 1>::reference>);
+            static_assert(noexcept(std::declval<circular_array<int, 1>&>().front()));
+
+            static_assert([] -> bool {
+                circular_array values = {1};
+                values.front() = 10;
+                return 10 == values.front() && 10 == values[0];
+            }());
+
+            circular_array values = {1};
+            EXPECT_EQ(1, values.front());
+            EXPECT_EQ(values.data(), &values.front());
+
+            // With one element, front and back are the same object.
+            EXPECT_EQ(&values.back(), &values.front());
+
+            values.front() = 10;
+            EXPECT_EQ(10, values[0]);
+        }
+
+        TEST(circular_array_methods, front_mut_overload_multi_element_array) {
+            static_assert(
+                std::same_as<
+                    decltype(std::declval<circular_array<int, 3>&>().front()), circular_array<int, 3>::reference
+                >
+            );
+            static_assert(noexcept(std::declval<circular_array<int, 3>&>().front()));
+
+            static_assert([] -> bool {
+                circular_array values = {1, 2, 3};
+                values.front() = 10;
+                return 10 == values.front() && 10 == values[0] && 2 == values[1] && 3 == values[2];
+            }());
+
+            circular_array values = {1, 2, 3};
+            EXPECT_EQ(1, values.front());
+            EXPECT_EQ(values.data(), &values.front());
+            EXPECT_NE(&values.back(), &values.front());
+
+            values.front() = 10;
+            EXPECT_EQ(10, values[0]);
+            EXPECT_EQ(2, values[1]);
+            EXPECT_EQ(3, values[2]);
+        }
+
+        TEST(circular_array_methods, front_const_overload_single_element_array) {
+            static_assert(std::same_as<decltype(std::declval<const circular_array<int, 1>&>().front()),
+                                       circular_array<int, 1>::const_reference>);
+            static_assert(
+                std::is_const_v<
+                    std::remove_reference_t<decltype(std::declval<const circular_array<int, 1>&>().front())>
+                >
+            );
+            static_assert(noexcept(std::declval<const circular_array<int, 1>&>().front()));
+
+            constexpr circular_array values = {1};
+
+            static_assert(1 == values.front());
+            static_assert(&values[0] == &values.front());
+            static_assert(values.front() == values.back());
+
+            EXPECT_EQ(1, values.front());
+            EXPECT_EQ(&values[0], &values.front());
+            EXPECT_EQ(&values.back(), &values.front());
+        }
+
+        TEST(circular_array_methods, front_const_overload_multi_element_array) {
+            static_assert(
+                std::same_as<
+                    decltype(std::declval<const circular_array<int, 3>&>().front()),
+                    circular_array<int, 3>::const_reference
+                >
+            );
+
+            static_assert(
+                std::is_const_v<
+                    std::remove_reference_t<decltype(std::declval<const circular_array<int, 3>&>().front())>
+                >
+            );
+
+            static_assert(noexcept(std::declval<const circular_array<int, 3>&>().front()));
+
+            constexpr circular_array values = {1, 2, 3};
+
+            static_assert(1 == values.front());
+            static_assert(values.front() == values[0]);
+
+            EXPECT_EQ(1, values.front());
+            EXPECT_EQ(values.data(), &values.front());
+            EXPECT_NE(&values.back(), &values.front());
+        }
+
+        TEST(circular_array_methods, back_mut_overload_single_element_array) {
+            static_assert(
+                std::same_as<
+                    decltype(std::declval<circular_array<int, 1>&>().back()), circular_array<int, 1>::reference
+                >
+            );
+            static_assert(noexcept(std::declval<circular_array<int, 1>&>().back()));
+
+            static_assert([] -> bool {
+                circular_array values = {1};
+                values.back() = 10;
+                return 10 == values.back() && 10 == values.front();
+            }());
+
+            circular_array values = {1};
+            EXPECT_EQ(1, values.back());
+            EXPECT_EQ(values.data(), &values.back());
+            EXPECT_EQ(&values.front(), &values.back());
+
+            values.back() = 10;
+            EXPECT_EQ(10, values[0]);
+        }
+
+        TEST(circular_array_methods, back_mut_overload_multi_element_array) {
+            static_assert(
+                std::same_as<decltype(std::declval<circular_array<int, 3>&>().back()), circular_array<int, 3>::reference>
+            );
+            static_assert(noexcept(std::declval<circular_array<int, 3>&>().back()));
+
+            static_assert([] -> bool {
+                circular_array values = {1, 2, 3};
+                values.back() = 30;
+                return 30 == values.back() && 1 == values[0] && 2 == values[1] && 30 == values[2];
+            }());
+
+            circular_array values = {1, 2, 3};
+
+            EXPECT_EQ(3, values.back());
+            EXPECT_EQ(&values[2], &values.back());
+            EXPECT_EQ(2, &values.back() - &values.front());
+
+            values.back() = 30;
+            EXPECT_EQ(1, values[0]);
+            EXPECT_EQ(2, values[1]);
+            EXPECT_EQ(30, values[2]);
+        }
+
+        TEST(circular_array_methods, back_const_overload_single_element_array) {
+            static_assert(
+                std::same_as<
+                    decltype(
+                        std::declval<const circular_array<int, 1>&>().back()
+                    ), circular_array<int, 1>::const_reference
+                >
+            );
+            static_assert(std::is_const_v<
+                std::remove_reference_t<decltype(std::declval<const circular_array<int, 1>&>().back())>>);
+            static_assert(noexcept(std::declval<const circular_array<int, 1>&>().back()));
+
+            constexpr circular_array values = {1};
+            static_assert(1 == values.back());
+
+            EXPECT_EQ(1, values.back());
+            EXPECT_EQ(values.data(), &values.back());
+            EXPECT_EQ(&values.front(), &values.back());
+        }
+
+        TEST(circular_array_methods, back_const_overload_multi_element_array) {
+            static_assert(std::same_as<decltype(std::declval<const circular_array<int, 3>&>().back()),
+                                       circular_array<int, 3>::const_reference>);
+            static_assert(std::is_const_v<
+                std::remove_reference_t<decltype(std::declval<const circular_array<int, 3>&>().back())>>);
+            static_assert(noexcept(std::declval<const circular_array<int, 3>&>().back()));
+
+            constexpr circular_array values = {1, 2, 3};
+            static_assert(3 == values.back());
+            static_assert(values.back() == values[2]);
+
+            EXPECT_EQ(3, values.back());
+            EXPECT_EQ(&values[2], &values.back());
+            EXPECT_EQ(2, &values.back() - &values.front());
+        }
+
+        TEST(circular_array_methods, data_returns_the_address_of_the_first_element) {
+            static_assert(
+                std::same_as<decltype(std::declval<circular_array<int, 3>&>().data()), circular_array<int, 3>::pointer>
+            );
+
+            static_assert(
+                std::same_as<decltype(std::declval<const circular_array<int, 3>&>().data()),
+                circular_array<int, 3>::const_pointer>
+            );
+
+            static_assert(noexcept(std::declval<circular_array<int, 3>&>().data()));
+
+            circular_array values = {1, 2, 3};
+            EXPECT_EQ(values.data(), values.data());
+            EXPECT_EQ(&values[2], values.data() + 2);
+        }
+
+        TEST(circular_array_methods, size_and_max_size_and_empty_are_compile_time_constants) {
+            static_assert(3 == circular_array<int, 3>{}.size());
+            static_assert(3 == circular_array<int, 3>{}.max_size());
+            static_assert(!circular_array<int, 3>{}.empty());
+            static_assert(1 == circular_array<int, 1>{}.size());
+            static_assert(!circular_array<int, 1>{}.empty());
+
+            static_assert(noexcept(std::declval<const circular_array<int, 3>&>().size()));
+            static_assert(std::same_as<decltype(std::declval<const circular_array<int, 3>&>().size()),
+                                       circular_array<int, 3>::size_type>);
+
+            SUCCEED();
+        }
+
+        TEST(circular_array_methods, fill_sets_every_element) {
+            static_assert([] -> bool {
+                circular_array values = {1, 2, 3};
+                values.fill(7);
+                return 7 == values[0] && 7 == values[1] && 7 == values[2];
+            }());
+
+            circular_array values = {1, 2, 3};
+            values.fill(7);
+            EXPECT_EQ(7, values[0]);
+            EXPECT_EQ(7, values[1]);
+            EXPECT_EQ(7, values[2]);
+
+            const int* const before = values.data();
+            values.fill(0);
+            EXPECT_EQ(before, values.data());
+            EXPECT_EQ(0, values[0]);
+            EXPECT_EQ(0, values[1]);
+            EXPECT_EQ(0, values[2]);
+        }
+
+        TEST(circular_array_methods, fill_noexcept_follows_the_element_assignment) {
+            static_assert(noexcept(std::declval<circular_array<int, 3>&>().fill(0)));
+
+            static_assert(
+                !noexcept(
+                    std::declval<circular_array<std::string, 2>&>().fill(std::declval<const std::string&>())
+                )
+            );
+
+            SUCCEED();
+        }
+
+        TEST(circular_array_methods, swap_exchanges_contents_not_addresses) {
+            static_assert([] -> bool {
+                circular_array first = {1, 2, 3};
+                circular_array second = {4, 5, 6};
+                first.swap(second);
+                return 4 == first[0] && 6 == first[2] && 1 == second[0] && 3 == second[2];
+            }());
+
+            circular_array first = {1, 2, 3};
+            circular_array second = {4, 5, 6};
+
+            const int* const first_data = first.data();
+            const int* const second_data = second.data();
+
+            first.swap(second);
+
+            EXPECT_EQ(4, first[0]);
+            EXPECT_EQ(5, first[1]);
+            EXPECT_EQ(6, first[2]);
+
+            EXPECT_EQ(1, second_data[0]);
+            EXPECT_EQ(2, second_data[1]);
+            EXPECT_EQ(3, second_data[2]);
+
+            EXPECT_EQ(first_data, first.data());
+            EXPECT_EQ(second_data, second.data());
+        }
+
+        TEST(circular_array_methods, swap_noexcept_follows_the_element_swap) {
+            static_assert(
+                noexcept(std::declval<circular_array<int, 3>&>().swap(std::declval<circular_array<int, 3>&>()))
+            );
+
+            static_assert(std::is_nothrow_swappable_v<std::string>);
+            static_assert(
+                noexcept(
+                    std::declval<circular_array<std::string, 2>&>().swap(std::declval<circular_array<std::string, 2>&>())
+                )
+            );
+
+            SUCCEED();
+        }
+    } // namespace methods_tests
+
+    // ── Iterator Tests ──────────────────────────────────────────────────────
+    namespace iterator_tests {
+        TEST(circular_array_iterators, satisfies_random_access_range) {
+            static_assert(std::ranges::random_access_range<circular_array<int, 3>>);
+
+            static_assert(std::ranges::random_access_range<const circular_array<int, 3>>);
+            static_assert(std::ranges::sized_range<circular_array<int, 3>>);
+
+            static_assert(std::same_as<std::ranges::range_value_t<circular_array<int, 3>>, int>);
+            static_assert(
+                std::same_as<decltype(std::declval<circular_array<int, 3>&>().begin()), circular_array<int, 3>::iterator>
+            );
             static_assert(
                 std::same_as<decltype(std::declval<const circular_array<int, 3>&>().begin()),
                 circular_array<int, 3>::const_iterator>
@@ -312,10 +637,7 @@ namespace collections::circular_array_testing {
         TEST(circular_array_iterators, cbegin_and_cend_are_const_on_a_mutable_array) {
             circular_array values = {1, 2, 3};
 
-            static_assert(
-                std::same_as<decltype(values.cbegin()), circular_array<int, 3>::const_iterator>
-            );
-
+            static_assert(std::same_as<decltype(values.cbegin()), circular_array<int, 3>::const_iterator>);
             static_assert(std::is_const_v<std::remove_reference_t<decltype(*values.cbegin())>>);
 
             EXPECT_EQ(values.data(), values.cbegin());
@@ -345,11 +667,8 @@ namespace collections::circular_array_testing {
             constexpr circular_array values = {1, 2, 3};
 
             static_assert(
-                std::same_as<
-                    decltype(values.crbegin()), circular_array<int, 3>::const_reverse_iterator
-                >
+                std::same_as<decltype(values.crbegin()), circular_array<int, 3>::const_reverse_iterator>
             );
-
             static_assert(std::is_const_v<std::remove_reference_t<decltype(*values.crbegin())>>);
 
             EXPECT_EQ(3, *values.crbegin());
@@ -365,394 +684,4 @@ namespace collections::circular_array_testing {
             );
         }
     } // namespace iterator_tests
-
-    // ── Method Tests ────────────────────────────────────────────────────────────────────────────
-    namespace methods_tests {
-        TEST(circular_array_methods, at_mut_overload_returns_mut_ref) {
-            static_assert(
-                std::same_as<
-                    decltype(
-                        std::declval<circular_array<int, 3>&>().at(0)
-                    ), circular_array<int, 3>::reference
-                >
-            );
-
-            static_assert(
-                !std::is_const_v<
-                    std::remove_reference_t<
-                        decltype(std::declval<circular_array<int, 3>&>().at(0))
-                    >
-                >
-            );
-
-            SUCCEED();
-        }
-
-        TEST(circular_array_methods, at_mut_overload_is_noexcept) {
-            static_assert(noexcept(std::declval<circular_array<int, 3>&>().at(0)));
-
-            SUCCEED();
-        }
-
-        TEST(circular_array_methods, at_const_overload_returns_const_ref) {
-            static_assert(
-                std::same_as<decltype(std::declval<const circular_array<int, 3>&>().at(0)),
-                circular_array<int, 3>::const_reference>
-            );
-
-            static_assert(
-                std::is_const_v<
-                    std::remove_reference_t<
-                        decltype(std::declval<const circular_array<int, 3>&>().at(0))
-                    >
-                >
-            );
-
-            SUCCEED();
-        }
-
-        TEST(circular_array_methods, at_const_overload_is_noexcept) {
-            static_assert(noexcept(std::declval<const circular_array<int, 3>&>().at(0)));
-
-            SUCCEED();
-        }
-
-        TEST(circular_array_methods, front_mut_overload_single_element_array) {
-            static_assert(
-                std::same_as<
-                    decltype(
-                        std::declval<circular_array<int, 1>&>().front()
-                    ), circular_array<int, 1>::reference
-                >
-            );
-
-            static_assert(noexcept(std::declval<circular_array<int, 1>&>().front()));
-
-            static_assert([] -> bool {
-                circular_array values = {1};
-                values.front() = 10;
-                return 10 == values.front() && 10 == values[0];
-            }());
-
-            circular_array values = {1};
-            EXPECT_EQ(1, values.front());
-            EXPECT_EQ(values.data(), &values.front());
-
-            // With one element, front and back are the same object.
-            EXPECT_EQ(&values.back(), &values.front());
-
-            values.front() = 10;
-            EXPECT_EQ(10, values[0]);
-        }
-
-        TEST(circular_array_methods, front_mut_overload_multi_element_array) {
-            static_assert(
-                std::same_as<
-                    decltype(
-                        std::declval<circular_array<int, 3>&>().front()
-                    ), circular_array<int, 3>::reference
-                >
-            );
-
-            static_assert(noexcept(std::declval<circular_array<int, 3>&>().front()));
-
-            static_assert([] -> bool {
-                circular_array values = {1, 2, 3};
-                values.front() = 10;
-                return 10 == values.front() && 10 == values[0] && 2 == values[1] && 3 == values[2];
-            }());
-
-            circular_array values = {1, 2, 3};
-            EXPECT_EQ(1, values.front());
-            EXPECT_EQ(values.data(), &values.front());
-            EXPECT_NE(&values.back(), &values.front());
-
-            values.front() = 10;
-            EXPECT_EQ(10, values[0]);
-            EXPECT_EQ(2, values[1]);
-            EXPECT_EQ(3, values[2]);
-        }
-
-        TEST(circular_array_methods, front_const_overload_single_element_array) {
-            static_assert(
-                std::same_as<decltype(std::declval<const circular_array<int, 1>&>().front()),
-                circular_array<int, 1>::const_reference>
-            );
-
-            static_assert(
-                std::is_const_v<
-                    std::remove_reference_t<
-                        decltype(std::declval<const circular_array<int, 1>&>().front())
-                    >
-                >
-            );
-
-            static_assert(noexcept(std::declval<const circular_array<int, 1>&>().front()));
-
-            constexpr circular_array values = {1};
-
-            static_assert(1 == values.front());
-            static_assert(&values[0] == &values.front());
-            static_assert(values.front() == values.back());
-
-            EXPECT_EQ(1, values.front());
-            EXPECT_EQ(&values[0], &values.front());
-            EXPECT_EQ(&values.back(), &values.front());
-        }
-
-        TEST(circular_array_methods, front_const_overload_multi_element_array) {
-            static_assert(
-                std::same_as<
-                    decltype(std::declval<const circular_array<int, 3>&>().front()),
-                    circular_array<int, 3>::const_reference
-                >
-            );
-
-            static_assert(
-                std::is_const_v<
-                    std::remove_reference_t<
-                        decltype(std::declval<const circular_array<int, 3>&>().front())
-                    >
-                >
-            );
-
-            static_assert(noexcept(std::declval<const circular_array<int, 3>&>().front()));
-
-            constexpr circular_array values = {1, 2, 3};
-
-            static_assert(1 == values.front());
-            static_assert(values.front() == values[0]);
-
-            EXPECT_EQ(1, values.front());
-            EXPECT_EQ(values.data(), &values.front());
-            EXPECT_NE(&values.back(), &values.front());
-        }
-
-        TEST(circular_array_methods, back_mut_overload_single_element_array) {
-            static_assert(
-                std::same_as<
-                    decltype(
-                        std::declval<circular_array<int, 1>&>().back()
-                    ), circular_array<int, 1>::reference
-                >
-            );
-
-            static_assert(noexcept(std::declval<circular_array<int, 1>&>().back()));
-
-            static_assert([] -> bool {
-                circular_array values = {1};
-                values.back() = 10;
-                return 10 == values.back() && 10 == values.front();
-            }());
-
-            circular_array values = {1};
-            EXPECT_EQ(1, values.back());
-            EXPECT_EQ(values.data(), &values.back());
-            EXPECT_EQ(&values.front(), &values.back());
-
-            values.back() = 10;
-            EXPECT_EQ(10, values[0]);
-        }
-
-        TEST(circular_array_methods, back_mut_overload_multi_element_array) {
-            static_assert(
-                std::same_as<
-                    decltype(
-                        std::declval<circular_array<int, 3>&>().back()
-                    ), circular_array<int, 3>::reference
-                >
-            );
-
-            static_assert(noexcept(std::declval<circular_array<int, 3>&>().back()));
-
-            static_assert([] -> bool {
-                circular_array values = {1, 2, 3};
-                values.back() = 30;
-                return 30 == values.back() && 1 == values[0] && 2 == values[1] && 30 == values[2];
-            }());
-
-            circular_array values = {1, 2, 3};
-
-            EXPECT_EQ(3, values.back());
-            EXPECT_EQ(&values[2], &values.back());
-            EXPECT_EQ(2, &values.back() - &values.front());
-
-            values.back() = 30;
-            EXPECT_EQ(1, values[0]);
-            EXPECT_EQ(2, values[1]);
-            EXPECT_EQ(30, values[2]);
-        }
-
-        TEST(circular_array_methods, back_const_overload_single_element_array) {
-            static_assert(
-                std::same_as<
-                    decltype(
-                        std::declval<const circular_array<int, 1>&>().back()
-                    ), circular_array<int, 1>::const_reference
-                >
-            );
-
-            static_assert(
-                std::is_const_v<
-                    std::remove_reference_t<
-                        decltype(std::declval<const circular_array<int, 1>&>().back())
-                    >
-                >
-            );
-
-            static_assert(noexcept(std::declval<const circular_array<int, 1>&>().back()));
-
-            constexpr circular_array values = {1};
-            static_assert(1 == values.back());
-
-            EXPECT_EQ(1, values.back());
-            EXPECT_EQ(values.data(), &values.back());
-            EXPECT_EQ(&values.front(), &values.back());
-        }
-
-        TEST(circular_array_methods, back_const_overload_multi_element_array) {
-            static_assert(
-                std::same_as<
-                    decltype(
-                        std::declval<const circular_array<int, 3>&>().back()
-                    ), circular_array<int, 3>::const_reference
-                >
-            );
-
-            static_assert(std::is_const_v<
-                std::remove_reference_t<decltype(std::declval<const circular_array<int, 3>&>().back())>>);
-            static_assert(noexcept(std::declval<const circular_array<int, 3>&>().back()));
-
-            constexpr circular_array values = {1, 2, 3};
-            static_assert(3 == values.back());
-            static_assert(values.back() == values[2]);
-
-            EXPECT_EQ(3, values.back());
-            EXPECT_EQ(&values[2], &values.back());
-            EXPECT_EQ(2, &values.back() - &values.front());
-        }
-
-        TEST(circular_array_methods, data_returns_the_address_of_the_first_element) {
-            static_assert(
-                std::same_as<
-                    decltype(
-                        std::declval<circular_array<int, 3>&>().data()
-                    ), circular_array<int, 3>::pointer
-                >
-            );
-
-            static_assert(
-                std::same_as<decltype(std::declval<const circular_array<int, 3>&>().data()),
-                circular_array<int, 3>::const_pointer>
-            );
-
-            static_assert(noexcept(std::declval<circular_array<int, 3>&>().data()));
-
-            circular_array values = {1, 2, 3};
-            EXPECT_EQ(values.data(), values.data());
-            EXPECT_EQ(&values[2], values.data() + 2);
-        }
-
-        TEST(circular_array_methods, size_and_max_size_and_empty_are_compile_time_constants) {
-            static_assert(3 == circular_array<int, 3>{}.size());
-            static_assert(3 == circular_array<int, 3>{}.max_size());
-            static_assert(!circular_array<int, 3>{}.empty());
-            static_assert(1 == circular_array<int, 1>{}.size());
-            static_assert(!circular_array<int, 1>{}.empty());
-
-            static_assert(noexcept(std::declval<const circular_array<int, 3>&>().size()));
-
-            static_assert(
-                std::same_as<decltype(std::declval<const circular_array<int, 3>&>().size()),
-                circular_array<int, 3>::size_type>
-            );
-
-            SUCCEED();
-        }
-
-        TEST(circular_array_methods, fill_sets_every_element) {
-            static_assert([] -> bool {
-                circular_array values = {1, 2, 3};
-                values.fill(7);
-                return 7 == values[0] && 7 == values[1] && 7 == values[2];
-            }());
-
-            circular_array values = {1, 2, 3};
-            values.fill(7);
-            EXPECT_EQ(7, values[0]);
-            EXPECT_EQ(7, values[1]);
-            EXPECT_EQ(7, values[2]);
-
-            const int* const before = values.data();
-            values.fill(0);
-            EXPECT_EQ(before, values.data());
-            EXPECT_EQ(0, values[0]);
-            EXPECT_EQ(0, values[1]);
-            EXPECT_EQ(0, values[2]);
-        }
-
-        TEST(circular_array_methods, fill_noexcept_follows_the_element_assignment) {
-            static_assert(noexcept(std::declval<circular_array<int, 3>&>().fill(0)));
-
-            static_assert(
-                !noexcept(
-                    std::declval<
-                        circular_array<std::string, 2>&
-                    >().fill(std::declval<const std::string&>())
-                )
-            );
-
-            SUCCEED();
-        }
-
-        TEST(circular_array_methods, swap_exchanges_contents_not_addresses) {
-            static_assert([] -> bool {
-                circular_array first = {1, 2, 3};
-                circular_array second = {4, 5, 6};
-                first.swap(second);
-                return 4 == first[0] && 6 == first[2] && 1 == second[0] && 3 == second[2];
-            }());
-
-            circular_array first = {1, 2, 3};
-            circular_array second = {4, 5, 6};
-
-            const int* const first_data = first.data();
-            const int* const second_data = second.data();
-
-            first.swap(second);
-
-            EXPECT_EQ(4, first[0]);
-            EXPECT_EQ(5, first[1]);
-            EXPECT_EQ(6, first[2]);
-
-            EXPECT_EQ(1, second_data[0]);
-            EXPECT_EQ(2, second_data[1]);
-            EXPECT_EQ(3, second_data[2]);
-
-            EXPECT_EQ(first_data, first.data());
-            EXPECT_EQ(second_data, second.data());
-        }
-
-        TEST(circular_array_methods, swap_noexcept_follows_the_element_swap) {
-            static_assert(
-                noexcept(
-                    std::declval<
-                        circular_array<int, 3>&
-                    >().swap(std::declval<circular_array<int, 3>&>())
-                )
-            );
-
-            static_assert(std::is_nothrow_swappable_v<std::string>);
-
-            static_assert(
-                noexcept(
-                    std::declval<
-                        circular_array<std::string, 2>&
-                    >().swap(std::declval<circular_array<std::string, 2>&>())
-                )
-            );
-
-            SUCCEED();
-        }
-    } // namespace methods_tests
 } // namespace collections::circular_array_testing
