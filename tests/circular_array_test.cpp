@@ -30,11 +30,10 @@ namespace collections::circular_array_testing {
         concept deducible = requires {
             circular_array{std::declval<Args>()...};
         };
-
     } // namespace
 
     // ── Aggregate Tests ─────────────────────────────────────────────────────
-    namespace aggregate_tests {
+    namespace aggregate_testing {
         TEST(circular_array_aggregate, is_aggregate) {
             static_assert(std::is_aggregate_v<circular_array<int, 3>>);
             static_assert(std::is_aggregate_v<circular_array<std::string, 2>>);
@@ -43,8 +42,8 @@ namespace collections::circular_array_testing {
         }
 
         TEST(
-            circular_array_aggregate, 
-            brace_init_checks_arity_at_compile_time
+            circular_array_aggregate,
+            is_brace_initializable
         ) {
             static_assert(
                 brace_initializable<
@@ -63,25 +62,43 @@ namespace collections::circular_array_testing {
             );
 
             static_assert(brace_initializable<circular_array<int, 3>, int>);
+
             static_assert(brace_initializable<circular_array<int, 3>>);
-            static_assert(!brace_initializable<circular_array<int, 3>, int, int, int, int>);
 
-            static_assert(!brace_initializable<circular_array<int, 2>, int, std::string>);
+            static_assert(
+                !brace_initializable<
+                    circular_array<int, 3>, int, int, int, int
+                >
+            );
 
-            SUCCEED();
-        }
-
-        TEST(circular_array_aggregate, brace_init_rejects_narrowing) {
-            static_assert(!brace_initializable<circular_array<int, 2>, double, double>);
-            static_assert(!brace_initializable<circular_array<int, 2>, int, long long>);
-            static_assert(!brace_initializable<circular_array<char, 2>, int, int>);
-
-            static_assert(!brace_initializable<circular_array<double, 2>, int, int>);
+            static_assert(
+                !brace_initializable<circular_array<int, 2>, int, std::string>
+            );
 
             SUCCEED();
         }
 
-        TEST(circular_array_aggregate, brace_init_value_initializes_the_unsupplied_tail) {
+        TEST(circular_array_aggregate, no_narrowing_conversions) {
+            static_assert(
+                !brace_initializable<circular_array<int, 2>, double, double>
+            );
+
+            static_assert(
+                !brace_initializable<circular_array<int, 2>, int, long long>
+            );
+
+            static_assert(
+                !brace_initializable<circular_array<char, 2>, int, int>
+            );
+
+            static_assert(
+                !brace_initializable<circular_array<double, 2>, int, int>
+            );
+
+            SUCCEED();
+        }
+
+        TEST(circular_array_aggregate, initializes_remaining_elements) {
             constexpr circular_array<int, 3> values = {7};
             static_assert(7 == values[0]);
             static_assert(0 == values[1]);
@@ -90,45 +107,125 @@ namespace collections::circular_array_testing {
             SUCCEED();
         }
 
-        TEST(circular_array_aggregate, has_no_implicit_conversion_from_a_single_element) {
+        TEST(circular_array_aggregate, no_implicit_conversions) {
             static_assert(!std::is_convertible_v<int, circular_array<int, 3>>);
 
             SUCCEED();
         }
 
         TEST(circular_array_aggregate, brace_init_moves_rvalue_elements) {
-            std::string first = "a string long enough to defeat the small string optimization";
-            std::string second = "another string long enough to defeat the small string optimization";
+            static constexpr char first_cstr[] = 
+            "a string long enough to defeat the small string optimization";
+
+            static constexpr char second_cstr[] =
+            "another string long enough to defeat the small string optimization";
+            
+            std::string first = first_cstr;
+            std::string second = second_cstr;
 
             const circular_array values = {std::move(first), std::move(second)};
 
-            EXPECT_EQ(values[0], "a string long enough to defeat the small string optimization");
-            EXPECT_EQ(values[1], "another string long enough to defeat the small string optimization");
+            EXPECT_EQ(values[0], first_cstr);
+            EXPECT_EQ(values[1], second_cstr);
 
-            EXPECT_NE(first, "a string long enough to defeat the small string optimization");
-            EXPECT_NE(second, "another string long enough to defeat the small string optimization");
+            EXPECT_NE(first, first_cstr);
+            EXPECT_NE(second, second_cstr);
         }
 
-        TEST(circular_array_aggregate, special_members_are_implicit_and_trivial) {
-            static_assert(std::is_trivially_default_constructible_v<circular_array<int, 3>>);
-            static_assert(std::is_trivially_copy_constructible_v<circular_array<int, 3>>);
-            static_assert(std::is_trivially_move_constructible_v<circular_array<int, 3>>);
-            static_assert(std::is_trivially_copy_assignable_v<circular_array<int, 3>>);
-            static_assert(std::is_trivially_move_assignable_v<circular_array<int, 3>>);
-            static_assert(std::is_trivially_destructible_v<circular_array<int, 3>>);
-            static_assert(std::is_trivially_copyable_v<circular_array<int, 3>>);
+        TEST(circular_array_aggregate, is_default_constructible) {
+            static_assert(
+                std::is_default_constructible_v<circular_array<int, 3>>
+            );
 
-            // Layout must match the bare C array it wraps.
+            static_assert(
+                std::is_default_constructible_v<circular_array<std::string, 3>>
+            );
+
+            static_assert(
+                std::is_trivially_default_constructible_v<
+                    circular_array<int, 3>
+                >
+            );
+
+            static_assert(
+                !std::is_trivially_default_constructible_v<
+                    circular_array<std::string, 3>
+                >
+            );
+
+            SUCCEED();
+        }
+
+        TEST(circular_array_aggregate, is_copy_constructible) {
+            static_assert(
+                std::is_copy_constructible_v<circular_array<int, 3>>
+            );
+
+            static_assert(
+                std::is_copy_constructible_v<circular_array<std::string, 2>>
+            );
+
+            static_assert(
+                std::is_trivially_copy_constructible_v<circular_array<int, 3>>
+            );
+
+            static_assert(
+                !std::is_trivially_copy_constructible_v<
+                    circular_array<std::string, 2>
+                >
+            );
+
+            SUCCEED();
+        }
+
+        TEST(circular_array_aggregate, is_move_constructible) {
+            static_assert(
+                std::is_move_constructible_v<circular_array<int, 3>>
+            );
+
+            static_assert(
+                std::is_move_constructible_v<circular_array<std::string, 2>>
+            );
+
+            static_assert(
+                std::is_trivially_move_constructible_v<circular_array<int, 3>>
+            );
+
+            static_assert(
+                !std::is_trivially_move_constructible_v<
+                    circular_array<std::string, 2>
+                >
+            );
+        }
+
+        TEST(circular_array_aggregate, is_destructible) {
+            static_assert(
+                std::is_destructible_v<circular_array<int, 3>>
+            );
+
+            static_assert(
+                std::is_destructible_v<circular_array<std::string, 3>>
+            );
+
+            static_assert(
+                std::is_trivially_destructible_v<circular_array<int, 3>>
+            );
+
+            static_assert(
+                !std::is_trivially_destructible_v<
+                    circular_array<std::string, 3>
+                >
+            );
+
+            SUCCEED();
+        }
+
+        TEST(circular_array_aggregate, is_standard_layout) {
             static_assert(std::is_standard_layout_v<circular_array<int, 3>>);
-            static_assert(sizeof(circular_array<int, 3>) == sizeof(int[3]));
-            static_assert(alignof(circular_array<int, 3>) == alignof(int[3]));
 
-            // A non-trivial value_type must propagate, not be papered over.
-            static_assert(!std::is_trivially_copyable_v<circular_array<std::string, 2>>);
-            static_assert(std::is_copy_constructible_v<circular_array<std::string, 2>>);
-            static_assert(std::is_move_constructible_v<circular_array<std::string, 2>>);
-            static_assert(std::is_copy_assignable_v<circular_array<std::string, 2>>);
-            static_assert(std::is_move_assignable_v<circular_array<std::string, 2>>);
+            static_assert(sizeof(circular_array<int, 3>) == sizeof(int[3]));
+
+            static_assert(alignof(circular_array<int, 3>) == alignof(int[3]));
 
             SUCCEED();
         }
@@ -154,12 +251,17 @@ namespace collections::circular_array_testing {
             EXPECT_EQ(3, target[2]);
         }
 
-        TEST(circular_array_aggregate, deduces_its_template_arguments) {
+        TEST(circular_array_aggregate, is_deducible) {
             circular_array values = {1, 2, 3};
-            static_assert(std::same_as<decltype(values), circular_array<int, 3>>);
+            static_assert(
+                std::same_as<decltype(values), circular_array<int, 3>>
+            );
 
-            [[maybe_unused]] circular_array singleton = {1};
-            static_assert(std::same_as<decltype(singleton), circular_array<int, 1>>);
+            [[maybe_unused]]
+            circular_array singleton = {1};
+            static_assert(
+                std::same_as<decltype(singleton), circular_array<int, 1>>
+            );
 
             static_assert(deducible<int, int, int>);
             static_assert(!deducible<int, double>);
@@ -170,14 +272,54 @@ namespace collections::circular_array_testing {
         }
 
         TEST(circular_array_aggregate, is_structural) {
-            static_assert(std::is_structural_v<circular_array<int, 3>>); // Ignore this error, this is valid in C++26
+            static_assert(std::is_structural_v<circular_array<int, 3>>);
 
             SUCCEED();
         }
     } // namespace aggregate_tests
 
     // ── Overloaded Operators Tests ──────────────────────────────────────────
-    namespace overloaded_operators_tests {
+    namespace overloaded_operators_testing {
+        TEST(circular_array_operators, is_copy_assignable) {
+            static_assert(
+                std::is_copy_assignable_v<circular_array<int, 3>>
+            );
+
+            static_assert(
+                std::is_copy_assignable_v<circular_array<std::string, 3>>
+            );
+
+            static_assert(
+                std::is_trivially_copy_assignable_v<circular_array<int, 3>>
+            );
+
+            static_assert(
+                !std::is_trivially_copy_assignable_v<
+                    circular_array<std::string, 3>
+                >
+            );
+        }
+
+        TEST(circular_array_operators, is_move_assignable) {
+            static_assert(
+                std::is_move_assignable_v<circular_array<int, 3>>
+            );
+
+            static_assert(
+                std::is_move_assignable_v<circular_array<std::string, 3>>
+            );
+
+            static_assert(
+                std::is_move_assignable_v<circular_array<int, 3>>
+            );
+
+            static_assert(
+                !std::is_trivially_move_assignable_v<
+                    circular_array<std::string, 3>
+                >
+            );
+        }
+
         TEST(circular_array_operators, random_access_mut_overload_returns_mut_ref) {
             static_assert(std::same_as<decltype(std::declval<circular_array<int, 3>&>()[0]),
                           circular_array<int, 3>::reference>);
