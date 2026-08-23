@@ -4,9 +4,11 @@
 // ISO C Includes
 #include <cstddef>
 #include <cstdint>
+#include <cstring>
 
 // ISO C++ Includes
 #include <algorithm>
+#include <compare>
 #include <concepts>
 #include <expected>
 #include <functional>
@@ -21,6 +23,7 @@ namespace collections {
     public:
         // ── Forward Declarations ────────────────────────────────────────────
         class iterator;
+        
         class const_iterator;
 
         // ── Aliases ─────────────────────────────────────────────────────────
@@ -42,9 +45,6 @@ namespace collections {
 
         using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
-        // ── error ───────────────────────────────────────────────────────────
-        enum class error : std::uint8_t { out_of_range };
-
         // ── Fields ──────────────────────────────────────────────────────────
         value_type values_[N];
 
@@ -61,22 +61,28 @@ namespace collections {
         [[gnu::always_inline]] [[nodiscard]]
         static constexpr auto _move_ptr(
             const_pointer ptr,
-            difference_type displacement
+            const difference_type offset
         ) noexcept -> pointer {
+            if constexpr (N == 0) {
+                return ptr;
+            }
+
             return const_cast<pointer>(
-                ptr + (((displacement % SIGNED_N) + SIGNED_N) % SIGNED_N)
+                ptr + (((offset % SIGNED_N) + SIGNED_N) % SIGNED_N)
             );
         }
 
-        template<std::predicate<value_type, value_type> Predicate>
-        constexpr void _sort(iterator first, iterator last, Predicate pred) {
+        template<std::random_access_iterator Iterator = iterator,
+                 std::predicate<value_type, value_type> Predicate>
+        constexpr void _sort(Iterator first, Iterator last, Predicate pred) {
             std::sort(first, last, pred);
         }
 
-        template<std::predicate<value_type, value_type> Predicate>
+        template<std::random_access_iterator Iterator = iterator,
+                 std::predicate<value_type, value_type> Predicate>
         constexpr void _stable_sort(
-            iterator first,
-            iterator last,
+            Iterator first,
+            Iterator last,
             Predicate pred
         ) {
             std::stable_sort(first, last, pred);
@@ -446,14 +452,26 @@ namespace collections {
             }
         };
 
+        // ── Overloaded Operators ────────────────────────────────────────────
         [[nodiscard]]
-        constexpr auto operator==(
-            const circular_array&
-        ) const -> bool = default;
+        constexpr auto operator==(const circular_array& rhs) const noexcept(
+            noexcept(std::declval<value_type>() == std::declval<value_type>())
+        ) -> bool {
+            return std::equal(this->begin(), this->end(), rhs.begin());
+        }
 
         [[nodiscard]]
-        constexpr auto operator<=>(const circular_array&) const = default;
-
+        constexpr auto operator<=>(
+            const circular_array& rhs
+        ) const noexcept(
+            noexcept(std::declval<value_type>() <=> std::declval<value_type>())
+        ) -> std::compare_three_way_result_t<value_type> {
+            return std::lexicographical_compare_three_way(
+                this->values_, this->values_ + N,
+                rhs.values_, rhs.values_ + N
+            );
+        }
+        
         [[nodiscard]]
         constexpr auto operator[](
             difference_type index
@@ -492,7 +510,7 @@ namespace collections {
         }
 
         [[gnu::always_inline]] [[nodiscard]]
-        constexpr auto back()  noexcept -> reference {
+        constexpr auto back() noexcept -> reference {
             return this->values_[N - 1];
         }
 
@@ -502,7 +520,7 @@ namespace collections {
         }
 
         [[gnu::always_inline]] [[nodiscard]]
-        constexpr auto data()  noexcept -> pointer {
+        constexpr auto data() noexcept -> pointer {
             return this->values_;
         }
 
@@ -595,7 +613,7 @@ namespace collections {
             this->_sort(begin(), end(), std::less<value_type>{});
         }
 
-        template<std::contiguous_iterator Iterator = iterator>
+        template<std::random_access_iterator Iterator = iterator>
         constexpr void sort(Iterator first, Iterator last) {
             if (first == last) [[unlikely]] {
                 return;
@@ -604,7 +622,7 @@ namespace collections {
             this->_sort(first, last, std::less<value_type>{});
         }
 
-        template<std::contiguous_iterator Iterator = iterator,
+        template<std::random_access_iterator Iterator = iterator,
                  std::predicate<value_type, value_type> Predicate>
         constexpr void sort(Iterator first, Iterator last, Predicate pred) {
             if (first == last) [[unlikely]] {
@@ -618,7 +636,8 @@ namespace collections {
             this->_stable_sort(begin(), end(), std::less<value_type>{});
         }
 
-        constexpr void stable_sort(iterator first, iterator last) {
+         template<std::random_access_iterator Iterator = iterator>
+        constexpr void stable_sort(Iterator first, Iterator last) {
             if (first == last) [[unlikely]] {
                 return;
             }
@@ -626,10 +645,11 @@ namespace collections {
             this->_stable_sort(first, last, std::less<value_type>{});
         }
 
-        template<std::predicate<value_type, value_type> Predicate>
+         template<std::random_access_iterator Iterator = iterator,
+                 std::predicate<value_type, value_type> Predicate>
         constexpr void stable_sort(
-            iterator first,
-            iterator last,
+            Iterator first,
+            Iterator last,
             Predicate pred
         ) {
             if (first == last) [[unlikely]] {
